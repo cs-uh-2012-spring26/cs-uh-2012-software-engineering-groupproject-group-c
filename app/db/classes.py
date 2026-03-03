@@ -77,3 +77,14 @@ def get_class_by_id(class_id: str) -> dict:
 
     cls = DB.get_collection(CLASS_COLLECTION).find_one({'_id': oid})
     return _class_to_dict(cls)
+
+def get_all_classes() -> list[dict]:
+    """
+    Retrieve all fitness classes from the database.
+
+    Returns:
+        A list of class dicts.
+    """
+    col = DB.get_collection(CLASS_COLLECTION)
+    classes = col.find()
+    return [_class_to_dict(cls) for cls in classes]

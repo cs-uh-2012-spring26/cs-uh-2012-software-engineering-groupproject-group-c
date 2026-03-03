@@ -72,3 +72,13 @@ class ClassList(Resource):
             api.abort(400, str(e))
 
         return new_class, 201
+    
+    @api.response(200, 'Success')
+    def get(self):
+        """
+        Retrieve a list of all fitness classes.
+
+        Requires a valid Bearer token in the Authorization header.
+        """
+        classes = cls_db.get_all_classes()
+        return {'classes': classes}, 200
