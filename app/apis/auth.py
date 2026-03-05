@@ -26,6 +26,11 @@ register_input_model = api.model('RegisterInput', {
     'role': fields.String(required=True, example='Member', enum=['Admin', 'Member', 'Trainer'])    
 })
 
+login_input_model = api.model('LoginInput', {
+    'email': fields.String(required=True),
+    'password': fields.String(required=True)
+})
+
 
 # --------------------------------------------------------------------------- #
 # Endpoints
@@ -82,3 +87,43 @@ class Register(Resource):
         except ValueError as e:
             api.abort(400, str(e))
 
+
+
+@api.route('/login')
+class Login(Resource):
+
+    @api.expect(login_input_model)
+    @api.response(200, 'User logged in successfully')
+    @api.response(400, 'Invalid input or email not registered')
+    def post(self):
+        """
+        Login a user.
+        
+        Requires an email and a password.
+        """
+        data = request.json
+        required = ['email', 'password']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            api.abort(400, f'Missing required fields: {", ".join(missing)}')
+
+        email = data['email'].strip()
+        password = data['password'].strip()
+
+        if not email:
+            api.abort(400, 'email must not be blank.')
+            
+        if not password:
+            api.abort(400, 'password must not be blank.')
+
+        try:
+            user = users_db.get_user_by_email(email)
+            if not user:
+                api.abort(400, 'Email not registered')
+            
+            if not users_db.verify_password(user['password'], password):
+                api.abort(400, 'Invalid password')
+            
+            return {'message': 'User logged in successfully', 'user_id': user['id']}, 200
+        except ValueError as e:
+            api.abort(400, str(e))
