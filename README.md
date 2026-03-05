@@ -36,7 +36,7 @@ DEBUG="true"
 JWT_SECRET_KEY="your-secret-key"
 
 ```
-Keep JWT_SECRET_KEY secret — it signs all tokens.
+Keep JWT_SECRET_KEY secret, it signs all tokens.
 
 ```
 
@@ -102,13 +102,6 @@ python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 
 ---
 
-## Virtual Environment Management
-
-* Activate: `source .venv/bin/activate`
-* Deactivate: `deactivate`
-
----
-
 ## Swagger UI
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API documentation.
@@ -121,6 +114,13 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API document
 4. Click the **Authorize** button at the top of Swagger
 5. In the "Bearer" field, enter: `Bearer <your_token>` (type the word Bearer followed by a space, then paste your token)
 6. Click **Authorize** then **Close**
+
+---
+
+## Virtual Environment Management
+
+* Activate: `source .venv/bin/activate`
+* Deactivate: `deactivate`
 
 ---
 
