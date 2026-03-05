@@ -1,4 +1,3 @@
-````markdown
 # Fitness Classes API
 
 A REST API for managing **users**, **fitness classes**, **bookings**, and sending **reminder emails**.  
@@ -27,7 +26,7 @@ Built with **Flask-RESTX**, **MongoDB**, and **JWT authentication**.
 
 ## Environment Setup
 
-1. Create a `.env` file in the project root:
+1. Create a `.env` file in the project root with:
 
 ```env
 MONGO_URI="mongodb://localhost:27017"
@@ -35,9 +34,6 @@ DB_NAME="fitness_db"
 MOCK_DB="false"
 DEBUG="true"
 JWT_SECRET_KEY="your-secret-key"
-````
-
-> Keep `JWT_SECRET_KEY` secret — it signs all tokens.
 
 2. Create virtual environment and install dependencies:
 
@@ -120,14 +116,6 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API document
 4. Click the **Authorize** button at the top of Swagger
 5. In the "Bearer" field, enter: `Bearer <your_token>` (include the word Bearer followed by a space, then the token)
 6. Click **Authorize** then **Close**
-
----
-
-## Running Tests
-
-```bash
-pytest --cov=app tests/
-```
 
 ---
 
