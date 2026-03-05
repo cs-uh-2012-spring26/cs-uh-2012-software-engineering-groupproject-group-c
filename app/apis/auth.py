@@ -113,7 +113,7 @@ class Login(Resource):
 
         # Role is stored as an additional claim inside the token
         token = create_access_token(
-            identity=user['id'],
+            identity=user['email'],
             additional_claims={'role': user['role']}
         )
 
