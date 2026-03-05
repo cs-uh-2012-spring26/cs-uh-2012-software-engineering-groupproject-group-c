@@ -1,87 +1,123 @@
-# Students Records API
+````markdown
+# Fitness Classes API
 
-This repo provides a template for setting up a flask rest API server. As a starting point, it shows an example of a simple hello world endpoint as well as endpoints that offer interactions with student records.
+A REST API for managing **users**, **fitness classes**, **bookings**, and sending **reminder emails**.  
+Built with **Flask-RESTX**, **MongoDB**, and **JWT authentication**.  
+
+---
 
 ## Prerequisites
 
-- python 3.10 or higher
-- MongoDB installed. Follow [https://www.mongodb.com/docs/manual/installation/](https://www.mongodb.com/docs/manual/installation/)
-to install MongoDB locally. Select the right link for your operating system.
+- Python 3.10 or higher  
+- MongoDB installed and running  
+  - [MongoDB Installation Guide](https://www.mongodb.com/docs/manual/installation/)  
+
+---
 
 ## Tech Stack
 
-This flask web app uses:
+- **Flask-RESTX** — REST API framework with automatic OpenAPI/Swagger generation  
+- **PyMongo** — MongoDB driver  
+- **Flask-JWT-Extended** — JWT authentication  
+- **pytest** — Testing framework  
+- **mongomock** — Mock MongoDB for unit tests  
+- **Flask-CORS** — Enable cross-origin requests  
 
-- [Flask-RESTX][flask-restx] for creating REST APIs. Directory structure
-follows [flask restx instructions on scaling your project][flask-restx-scaling]
-  - flask-restx automatically generates
-  [OpenAPI specifications][openapi-specification] for your API
-- [PyMongo][pymongo] for communicating with the mongodb database
-- [pytest][pytest] for testing
-(see [flask specific testing instructions on pytest][pytest-flask]
-for more info specific to testing Flask applications)
-- [mongomock][mongomock] for mocking the mongodb during unit testing
+---
 
-[flask-restx]: https://flask-restx.readthedocs.io/en/latest/quickstart.html
-[flask-restx-scaling]: https://flask-restx.readthedocs.io/en/latest/scaling.html
-[openapi-specification]: https://swagger.io/docs/specification/v3_0/about/
-[pymongo]: https://pymongo.readthedocs.io/en/stable/
-[pytest]: https://docs.pytest.org/en/stable/
-[pytest-flask]: https://flask.palletsprojects.com/en/stable/testing/
-[mongomock]: https://docs.mongoengine.org/guide/mongomock.html
+## Environment Setup
 
-## Running Locally
+1. Create a `.env` file and set the following:
 
-This assumes you are already running MongoDB (e.g., through
-`brew services restart mongodb-community` on MacOS or
-`sudo systemctl restart mongod` on Linux.
-Find the equivalent for your OS)
+```env
+MONGO_URI="mongodb://localhost:27017"
+DB_NAME="fitness_db"
+MOCK_DB="false"
+DEBUG="true"
+JWT_SECRET_KEY="your-secret-key"
+````
 
-### Setting up the environment
+> Keep `JWT_SECRET_KEY` secret — it signs all tokens.
 
-1. Check `.samplenv` file and follow the instructions there to create
-your `.env` file
-2. Run `make dev_env` to create a virtual environment and install dependencies
+2. Create virtual environment and install dependencies:
 
-### Running the server
-
-1. Run `make run_local_server` to run the server. This will also run the tests first.
-2. Go to [http://127.0.0.1:8000](http://127.0.0.1:8000) to see it running!
-
-You can use `ctrl-c` to stop the server.
-
-### Testing the API server
-
-Run `make tests` to execute the test suite and see the coverage report
-in your terminal. You can also see a visual report by viewing
-[/htmlcov/index.html](/htmlcov/index.html) in your browser.
-
-### Manually activating and deactivating the virtual environment
-
-Manually activating and deactivating the virtual environment is useful for
-debugging issues and running specific scripts with flexibility (e.g., you can
-run `FLASK_APP=app flask run --debug --host=0.0.0.0 --port 8000`
-inside the virtual environment to directly start
-the server without running tests first).
-
-To activate the virtual environment manually:
-
-```sh
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt        # runtime dependencies
+pip install -r requirements-dev.txt    # dev/test dependencies
 ```
 
-Alternatively, you can use:
+---
 
-```sh
-. .venv/bin/activate
+## Running the Server
+
+```bash
+python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 ```
 
-To deactivate the virtual environment:
+* Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for Swagger UI
+* Stop server: `Ctrl+C`
 
-```sh
-deactivate
+---
+
+## Authentication
+
+### Endpoints (/register, /login)
+
+| Method | Endpoint    | Auth | Description                                  |
+| ------ | ----------- | ---- | -------------------------------------------- |
+| POST   | `/register` | None | Register a new user (Admin, Member, Trainer) |
+| POST   | `/login`    | None | Login and receive JWT token                  |
+
+**Password policy:** ≥8 characters, at least one uppercase, one lowercase, one digit.
+
+---
+
+## Fitness Classes
+
+### Endpoints (/classes)
+
+| Method | Endpoint                            | Auth          | Description               |
+| ------ | ----------------------------------- | ------------- | ------------------------- |
+| GET    | `/classes/`                         | None          | List all upcoming classes |
+| POST   | `/classes/`                         | Trainer/Admin | Create a new class        |
+| POST   | `/classes/<class_id>/book`          | Member        | Book a spot in a class    |
+| GET    | `/classes/<class_id>/members`       | Trainer/Admin | View booked members       |
+| POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminder emails      |
+
+
+## Virtual Environment Management
+
+* Activate: `source .venv/bin/activate`
+* Deactivate: `deactivate`
+
+---
+
+## Swagger UI
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API documentation.
+
+### Authenticate in Swagger
+
+1. Register through POST /Authentication/register
+2. Login through POST /Authentication/login to receive `access_token`
+3. Copy the access_token from the login response
+4. Click the "Authorize" button at the top of the Swagger page
+5. In the "Bearer" field, enter: Bearer <your_token> (type the word Bearer followed by a space, then your token)
+6. Click Authorize then Close 
+
+---
+
+## Additional Documentation
+
+See `/docs/BestPractices.md` for:
+
+* Branch naming
+* Testing conventions
+* Coding style
+
+---
+
 ```
-
-## Best Practices
-
-See [/docs/BestPractices.md](/docs/BestPractices.md) for advice regarding branch naming and other useful tips.
