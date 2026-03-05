@@ -3,29 +3,26 @@ REST API endpoints for fitness class management.
 """
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt
 
 import app.db.classes as cls_db
 
 api = Namespace('classes', description='Fitness class operations')
 
 # --------------------------------------------------------------------------- #
-# Request / Response models (used by Swagger)
-# --------------------------------------------------------------------------- #
-# --------------------------------------------------------------------------- #
-# Request model (used by Swagger to show expected body)
+# Models
 # --------------------------------------------------------------------------- #
 class_input_model = api.model('ClassInput', {
-    'name': fields.String(required=True, example='Morning Yoga'),
-    'instructor': fields.String(required=True, example='Jane Doe'),
-    'schedule': fields.String(required=True, example='2026-03-10T08:00'),
-    'capacity': fields.Integer(required=True, example=20),
-    'location': fields.String(required=True, example='Studio A'),
+    'name':        fields.String(required=True,  example='Morning Yoga'),
+    'instructor':  fields.String(required=True,  example='Jane Doe'),
+    'schedule':    fields.String(required=True,  example='2026-03-10T08:00'),
+    'capacity':    fields.Integer(required=True, example=20),
+    'location':    fields.String(required=True,  example='Studio A'),
     'description': fields.String(required=False, example='A relaxing flow for all levels.'),
 })
 
 # --------------------------------------------------------------------------- #
-# Endpoints
+# /classes/
 # --------------------------------------------------------------------------- #
 @api.route('/')
 class ClassList(Resource):
@@ -34,41 +31,31 @@ class ClassList(Resource):
     @api.expect(class_input_model)
     @api.response(201, 'Class created successfully')
     @api.response(400, 'Invalid input')
-    @api.response(401, 'Unauthorized')
+    @api.response(401, 'Unauthorized – valid JWT required')
+    @api.response(403, 'Forbidden – trainer or admin role required')
     def post(self):
-        """
-        Create a new fitness class.
-
-        Requires a valid Bearer token in the Authorization header.
-        All fields except `description` are mandatory.
-        """
-
+        """Create a new fitness class. Trainer or admin only."""
         claims = get_jwt()
-
-        # Trainer or admin only
         if claims['role'] not in ('trainer', 'admin'):
-            api.abort(401, 'Unauthorized')
-        
+            api.abort(403, 'Trainer or admin role required.')
+
         data = request.json
 
-        # --- Field presence check (belt-and-suspenders on top of validate=True)
         required = ['name', 'instructor', 'schedule', 'capacity', 'location']
         missing = [f for f in required if not data.get(f)]
         if missing:
             api.abort(400, f'Missing required fields: {", ".join(missing)}')
 
-        # --- Type / value validation
         capacity = data.get('capacity')
         if not isinstance(capacity, int) or capacity <= 0:
             api.abort(400, 'capacity must be a positive integer.')
 
-        name = data['name'].strip()
-        if not name:
+        if not data['name'].strip():
             api.abort(400, 'name must not be blank.')
 
         try:
             new_class = cls_db.add_class(
-                name=name,
+                name=data['name'].strip(),
                 instructor=data['instructor'],
                 schedule=data['schedule'],
                 capacity=capacity,
@@ -79,11 +66,75 @@ class ClassList(Resource):
             api.abort(400, str(e))
 
         return new_class, 201
-    
+
     @api.response(200, 'Success')
     def get(self):
-        """
-        Retrieve a list of all fitness classes.
-        """
+        """Retrieve a list of all fitness classes."""
         classes = cls_db.get_all_classes()
         return {'classes': classes}, 200
+
+
+# --------------------------------------------------------------------------- #
+# /classes/<class_id>/book
+# --------------------------------------------------------------------------- #
+@api.route('/<string:class_id>/book')
+class BookClass(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Booking successful')
+    @api.response(400, 'Already booked or class is full')
+    @api.response(403, 'Forbidden – member role required')
+    @api.response(404, 'Class not found')
+    def post(self, class_id):
+        """Book a spot in a fitness class. Member only."""
+        claims = get_jwt()
+        if claims['role'] != 'member':
+            api.abort(403, 'Only members can book a class.')
+
+        member_email = claims['sub']
+
+        cls = cls_db.get_class_by_id(class_id)
+        if cls is None:
+            api.abort(404, 'Class not found.')
+
+        try:
+            updated_class = cls_db.book_class(class_id, member_email)
+        except ValueError as e:
+            api.abort(400, str(e))
+
+        return {
+            'message': 'Booking successful.',
+            'class_id': class_id,
+            'enrolled': updated_class['enrolled'],
+            'capacity': updated_class['capacity'],
+        }, 200
+
+
+# --------------------------------------------------------------------------- #
+# /classes/<class_id>/members
+# --------------------------------------------------------------------------- #
+@api.route('/<string:class_id>/members')
+class ClassMembers(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Success')
+    @api.response(403, 'Forbidden – trainer or admin role required')
+    @api.response(404, 'Class not found')
+    def get(self, class_id):
+        """
+        View the list of members who booked a class. Trainer or admin only.
+        """
+        claims = get_jwt()
+        if claims['role'] not in ('trainer', 'admin'):
+            api.abort(403, 'Trainer or admin role required.')
+
+        try:
+            members = cls_db.get_booked_members(class_id)
+        except ValueError as e:
+            api.abort(404, str(e))
+
+        return {
+            'class_id': class_id,
+            'total_booked': len(members),
+            'booked_members': members,
+        }, 200
