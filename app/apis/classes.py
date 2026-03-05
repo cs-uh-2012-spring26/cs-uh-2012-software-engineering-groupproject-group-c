@@ -87,3 +87,38 @@ class ClassList(Resource):
         """
         classes = cls_db.get_all_classes()
         return {'classes': classes}, 200
+
+
+@api.route('/<string:class_id>/book')
+class BookClass(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Booking successful')
+    @api.response(400, 'Already booked or class is full')
+    @api.response(403, 'Forbidden - member role required')
+    @api.response(404, 'Class not found')
+    def post(self, class_id):
+        """
+        Book a spot in a fitness class. Member only.
+        """
+        claims = get_jwt()
+
+        if claims['role'] != 'member':
+            api.abort(403, 'Only members can book a class.')
+
+        member_email = claims['sub'] 
+        cls = cls_db.get_class_by_id(class_id)
+        if cls is None:
+            api.abort(404, 'Class not found.')
+
+        try:
+            updated_class = cls_db.book_class(class_id, member_email)
+        except ValueError as e:
+            api.abort(400, str(e))
+
+        return {
+            'message': 'Booking successful.',
+            'class_id': class_id,
+            'enrolled': updated_class['enrolled'],
+            'capacity': updated_class['capacity'],
+        }, 200
