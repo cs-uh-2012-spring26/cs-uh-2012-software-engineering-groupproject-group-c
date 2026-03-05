@@ -132,3 +132,29 @@ def book_class(class_id: str, member_email: str) -> dict:
 
     updated = col.find_one({'_id': query_id})
     return _class_to_dict(updated)
+
+def get_booked_members(class_id: str) -> list[str]:
+    """
+    Retrieve the list of member emails who have booked a class.
+
+    Args:
+        class_id: The ID of the class.
+
+    Returns:
+        A list of member email strings.
+
+    Raises:
+        ValueError: If the class does not exist.
+    """
+    col = DB.get_collection(CLASS_COLLECTION)
+    try:
+        query_id = ObjectId(class_id)
+    except InvalidId:
+        query_id = class_id
+
+    cls = col.find_one({'_id': query_id})
+
+    if cls is None:
+        raise ValueError('Class not found.')
+
+    return cls.get('booked_members', [])
