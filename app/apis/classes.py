@@ -80,6 +80,10 @@ class ClassList(Resource):
         Retrieve a list of all fitness classes.
         """
         classes = cls_db.get_all_classes()
+
+        for c in classes:
+            c.pop("booked_members", None)  
+
         return {'classes': classes}, 200
 
 
