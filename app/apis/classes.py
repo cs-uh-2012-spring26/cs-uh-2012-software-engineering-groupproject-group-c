@@ -9,12 +9,6 @@ import app.db.classes as cls_db
 
 api = Namespace('classes', description='Fitness class operations')
 
-# --------------------------------------------------------------------------- #
-# Request / Response models (used by Swagger)
-# --------------------------------------------------------------------------- #
-# --------------------------------------------------------------------------- #
-# Request model (used by Swagger to show expected body)
-# --------------------------------------------------------------------------- #
 class_input_model = api.model('ClassInput', {
     'name': fields.String(required=True, example='Morning Yoga'),
     'instructor': fields.String(required=True, example='Jane Doe'),
@@ -122,3 +116,33 @@ class BookClass(Resource):
             'enrolled': updated_class['enrolled'],
             'capacity': updated_class['capacity'],
         }, 200
+
+
+@api.route('/<string:class_id>/members')
+class ClassMembers(Resource):
+
+    @jwt_required()
+    @api.response(200, 'Success')
+    @api.response(403, 'Forbidden – trainer or admin role required')
+    @api.response(404, 'Class not found')
+    def get(self, class_id):
+        """
+        View the list of members who booked a class. Trainer or admin only.
+        """
+        claims = get_jwt()
+        if claims['role'] not in ('trainer', 'admin'):
+            api.abort(403, 'Trainer or admin role required.')
+
+        try:
+            members = cls_db.get_booked_members(class_id)
+        except ValueError as e:
+            api.abort(404, str(e))
+
+        return {
+            'class_id': class_id,
+            'total_booked': len(members),
+            'booked_members': members,
+        }, 200
+
+
+
