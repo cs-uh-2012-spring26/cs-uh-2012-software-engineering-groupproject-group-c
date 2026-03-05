@@ -3,7 +3,7 @@ REST API endpoints for fitness class management.
 """
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
 
 import app.db.classes as cls_db
 
@@ -34,7 +34,7 @@ class ClassList(Resource):
     @api.expect(class_input_model)
     @api.response(201, 'Class created successfully')
     @api.response(400, 'Invalid input')
-    @api.response(401, 'Unauthorized – valid JWT token required')
+    @api.response(401, 'Unauthorized')
     def post(self):
         """
         Create a new fitness class.
@@ -42,6 +42,13 @@ class ClassList(Resource):
         Requires a valid Bearer token in the Authorization header.
         All fields except `description` are mandatory.
         """
+
+        claims = get_jwt()
+
+        # Trainer or admin only
+        if claims['role'] not in ('trainer', 'admin'):
+            api.abort(401, 'Unauthorized')
+        
         data = request.json
 
         # --- Field presence check (belt-and-suspenders on top of validate=True)
@@ -77,8 +84,6 @@ class ClassList(Resource):
     def get(self):
         """
         Retrieve a list of all fitness classes.
-
-        Requires a valid Bearer token in the Authorization header.
         """
         classes = cls_db.get_all_classes()
         return {'classes': classes}, 200
