@@ -27,7 +27,7 @@ Built with **Flask-RESTX**, **MongoDB**, and **JWT authentication**.
 
 ## Environment Setup
 
-1. Create a `.env` file and set the following:
+1. Create a `.env` file in the project root:
 
 ```env
 MONGO_URI="mongodb://localhost:27017"
@@ -64,7 +64,7 @@ python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 
 ## Authentication
 
-### Endpoints (/register, /login)
+### Endpoints (/Authentication)
 
 | Method | Endpoint    | Auth | Description                                  |
 | ------ | ----------- | ---- | -------------------------------------------- |
@@ -88,6 +88,19 @@ python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 | POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminder emails      |
 
 
+
+## Workflow Example
+
+1. Register as a **Member** or **Trainer/Admin**
+2. Login → copy the JWT token
+3. Authorize in Swagger using `Bearer <JWT>`
+4. Create a class (Trainer/Admin) → `POST /classes/`
+5. Book a class (Member) → `POST /classes/<class_id>/book`
+6. View booked members (Trainer/Admin) → `GET /classes/<class_id>/members`
+7. Send reminders (Trainer/Admin) → `POST /classes/<class_id>/send-reminder`
+
+---
+
 ## Virtual Environment Management
 
 * Activate: `source .venv/bin/activate`
@@ -101,12 +114,20 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API document
 
 ### Authenticate in Swagger
 
-1. Register through POST /Authentication/register
-2. Login through POST /Authentication/login to receive `access_token`
-3. Copy the access_token from the login response
-4. Click the "Authorize" button at the top of the Swagger page
-5. In the "Bearer" field, enter: Bearer <your_token> (type the word Bearer followed by a space, then your token)
-6. Click Authorize then Close 
+1. Register through `POST /Authentication/register`
+2. Login through `POST /Authentication/login` to receive `access_token`
+3. Copy the `access_token` from the login response
+4. Click the **Authorize** button at the top of Swagger
+5. In the "Bearer" field, enter: `Bearer <your_token>` (include the word Bearer followed by a space, then the token)
+6. Click **Authorize** then **Close**
+
+---
+
+## Running Tests
+
+```bash
+pytest --cov=app tests/
+```
 
 ---
 
@@ -114,10 +135,11 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API document
 
 See `/docs/BestPractices.md` for:
 
-* Branch naming
-* Testing conventions
-* Coding style
+* Branch naming conventions
+* Testing guidelines
+* Coding style recommendations
 
 ---
 
+```
 ```
