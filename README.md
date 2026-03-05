@@ -35,6 +35,8 @@ MOCK_DB="false"
 DEBUG="true"
 JWT_SECRET_KEY="your-secret-key"
 
+```
+
 2. Create virtual environment and install dependencies:
 
 ```bash
