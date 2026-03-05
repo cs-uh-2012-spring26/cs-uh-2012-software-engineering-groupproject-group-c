@@ -2,6 +2,7 @@
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies
 import re
 import app.db.users as users_db
 
@@ -93,37 +94,27 @@ class Register(Resource):
 class Login(Resource):
 
     @api.expect(login_input_model)
-    @api.response(200, 'User logged in successfully')
-    @api.response(400, 'Invalid input or email not registered')
+    @api.response(200, 'Login successful')
+    @api.response(400, 'Missing required fields')
+    @api.response(401, 'Invalid credentials')
     def post(self):
-        """
-        Login a user.
-        
-        Requires an email and a password.
-        """
+        """Login and receive a JWT token. Use it as: Bearer <token>."""
         data = request.json
-        required = ['email', 'password']
-        missing = [f for f in required if not data.get(f)]
+
+        missing = [f for f in ['email', 'password'] if not data.get(f)]
         if missing:
             api.abort(400, f'Missing required fields: {", ".join(missing)}')
 
-        email = data['email'].strip()
-        password = data['password'].strip()
+        user = users_db.get_user_for_login(data['email'])
 
-        if not email:
-            api.abort(400, 'email must not be blank.')
-            
-        if not password:
-            api.abort(400, 'password must not be blank.')
+        # Deliberately vague — don't reveal which part was wrong
+        if user is None or not users_db.verify_password(user['password'], data['password']):
+            api.abort(401, 'Invalid email or password.')
 
-        try:
-            user = users_db.get_user_by_email(email)
-            if not user:
-                api.abort(400, 'Email not registered')
-            
-            if not users_db.verify_password(user['password'], password):
-                api.abort(400, 'Invalid password')
-            
-            return {'message': 'User logged in successfully', 'user_id': user['id']}, 200
-        except ValueError as e:
-            api.abort(400, str(e))
+        # Role is stored as an additional claim inside the token
+        token = create_access_token(
+            identity=user['id'],
+            additional_claims={'role': user['role']}
+        )
+
+        return {'token': token, 'role': user['role']}, 200
