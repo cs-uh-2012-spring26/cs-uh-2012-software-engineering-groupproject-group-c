@@ -45,18 +45,17 @@ def setup_class_booked(client, setup_class_empty, member_token):
 # TESTS: POST /classes/<id>/send-reminder
 # =========================================================================== #
 
-# Mocking the print function so we don't spam the console during testing.
-# If your app uses a specific mail function, change 'builtins.print' to 'app.apis.classes.send_email' (or similar)
+
 @patch('builtins.print') 
 def test_send_reminder_success(mock_print, client, setup_class_booked, trainer_token):
     res = client.post(f"/classes/{setup_class_booked}/send-reminder", headers={"Authorization": f"Bearer {trainer_token}"})
     assert res.status_code == HTTPStatus.OK
-    # Verify the mock was called (meaning the email logic was triggered)
+
     assert mock_print.called
 
 def test_send_reminder_no_token(client, setup_class_booked):
     res = client.post(f"/classes/{setup_class_booked}/send-reminder")
-    # Using 400 BAD_REQUEST to match the existing app/__init__.py handler
+
     assert res.status_code == HTTPStatus.BAD_REQUEST
 
 def test_send_reminder_member_forbidden(client, setup_class_booked, member_token):

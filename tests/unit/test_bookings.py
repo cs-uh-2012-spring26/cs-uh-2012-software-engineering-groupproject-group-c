@@ -53,7 +53,6 @@ def test_book_class_success(client, setup_class, member_token):
 
 def test_book_class_no_token(client, setup_class):
     res = client.post(f"/classes/{setup_class}/book")
-    # Using 400 BAD_REQUEST to match the existing app/__init__.py handler
     assert res.status_code == HTTPStatus.BAD_REQUEST
 
 def test_book_class_trainer_forbidden(client, setup_class, trainer_token):
@@ -75,7 +74,7 @@ def test_book_class_duplicate(client, setup_class, member_token):
     assert res.status_code == HTTPStatus.BAD_REQUEST
 
 def test_book_class_full(client, setup_class, member_token, member2_token):
-    # First member books the only spot (capacity is 1)
+    # First member books the only spot 
     client.post(f"/classes/{setup_class}/book", headers={"Authorization": f"Bearer {member_token}"})
     
     # Second member tries to book, but it's full

@@ -65,7 +65,6 @@ def test_create_class_admin_success(client, admin_token, valid_class_payload):
 
 def test_create_class_no_token(client, valid_class_payload):
     res = client.post("/classes/", json=valid_class_payload)
-    # Changed to match the application's current behavior
     assert res.status_code == HTTPStatus.BAD_REQUEST
 def test_create_class_member_forbidden(client, member_token, valid_class_payload):
     headers = {"Authorization": f"Bearer {member_token}"}
@@ -108,7 +107,7 @@ def test_get_classes_populated(client, trainer_token, valid_class_payload):
     headers = {"Authorization": f"Bearer {trainer_token}"}
     client.post("/classes/", json=valid_class_payload, headers=headers)
     
-    # Fetch classes publically (no token needed)
+    # Fetch classes publically
     res = client.get("/classes/")
     assert res.status_code == HTTPStatus.OK
     assert len(res.json["classes"]) == 1
@@ -134,11 +133,11 @@ def test_get_class_members_success(client, trainer_token, valid_class_payload):
     assert "booked_members" in res_members.json
 
 def test_get_class_members_member_forbidden(client, trainer_token, member_token, valid_class_payload):
-    # Trainer creates class
+
     res = client.post("/classes/", json=valid_class_payload, headers={"Authorization": f"Bearer {trainer_token}"})
     class_id = res.json["id"]
     
-    # Member tries to view members
+
     res_members = client.get(f"/classes/{class_id}/members", headers={"Authorization": f"Bearer {member_token}"})
     assert res_members.status_code == HTTPStatus.FORBIDDEN
     assert "Trainer or admin role required" in res_members.json["message"]

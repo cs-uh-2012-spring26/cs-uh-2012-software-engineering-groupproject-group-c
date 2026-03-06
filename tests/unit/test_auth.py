@@ -23,7 +23,6 @@ def test_register_success(client, valid_register_payload):
     assert 'user_id' in response.json
 
 def test_register_missing_fields(client, valid_register_payload):
-    # Remove password to simulate missing field
     del valid_register_payload['password']
     response = client.post("/Authentication/register", json=valid_register_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
@@ -36,13 +35,13 @@ def test_register_weak_password(client, valid_register_payload):
     assert "password must be at least 8 characters long" in response.json['message']
 
 def test_register_invalid_phone(client, valid_register_payload):
-    valid_register_payload['phone'] = "12345" # Not 10 digits
+    valid_register_payload['phone'] = "12345" 
     response = client.post("/Authentication/register", json=valid_register_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert "Invalid phone number format" in response.json['message']
 
 def test_register_invalid_role(client, valid_register_payload):
-    valid_register_payload['role'] = "SuperAdmin" # Not in allowed list
+    valid_register_payload['role'] = "SuperAdmin" 
     response = client.post("/Authentication/register", json=valid_register_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert "Invalid role" in response.json['message']
@@ -50,7 +49,6 @@ def test_register_invalid_role(client, valid_register_payload):
 def test_register_duplicate_email(client, valid_register_payload):
     # Register once
     client.post("/Authentication/register", json=valid_register_payload)
-    # Register again with the same email
     response = client.post("/Authentication/register", json=valid_register_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert "Email already registered" in response.json['message']
@@ -71,7 +69,7 @@ def test_login_success(client, valid_register_payload):
     response = client.post("/Authentication/login", json=login_payload)
     assert response.status_code == HTTPStatus.OK
     assert "token" in response.json
-    assert response.json["role"] == "member" # Notice in users.py it saves role as lowercase
+    assert response.json["role"] == "member" 
 
 def test_login_missing_fields(client):
     response = client.post("/Authentication/login", json={"email": "ahmed@gmail.com"})
