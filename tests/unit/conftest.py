@@ -1,54 +1,33 @@
 import pytest
-from dotenv import load_dotenv
-import yaml
+import os
+
+# 1. Force environment variables BEFORE importing the app
+os.environ['MONGO_URI'] = "mongodb://localhost:27017"
+os.environ['DB_NAME'] = "fitness_test_db"
+os.environ['MOCK_DB'] = "true" 
+os.environ['DEBUG'] = "true"
+os.environ['JWT_SECRET_KEY'] = "super-secret-test-key"
 
 from app import create_app
 from app.db import DB
-from app.db.students import StudentResource
+from app.db.constants import CLASS_COLLECTION, BOOKING_COLLECTION, USER_COLLECTION
 
-
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def app():
-    load_dotenv()
+    """Create and configure a new app instance for the test session."""
     app = create_app()
+    app.config.update({"TESTING": True})
     yield app
 
-
-@pytest.fixture
+@pytest.fixture()
 def client(app):
+    """A test client for the app."""
     return app.test_client()
 
-
-@pytest.fixture(scope="session")
-def runner(app):
-    return app.test_cli_runner()
-
-
-def load_students():
-    """
-    Load student data from the YAML fixture file.
-    """
-    with open("tests/unit/fixtures/students.yaml", "r") as file:
-        students = yaml.safe_load(file)
-
-    return students
-
-
-@pytest.fixture(scope="session")
-def students():
-    return load_students()
-
-
-@pytest.fixture(scope="function", autouse=True)
-def seeded_students_db(students):
-    """
-    Preload the mock 'students' collection with data from the YAML fixture.
-    """
-    student_resource = StudentResource()
-    student_resource.delete_all_students()  # Clear existing data
-    student_resource.add_multiple_students(students)
-
-
-@pytest.fixture(scope="function", params=load_students())
-def single_student(request):
-    return request.param
+@pytest.fixture(autouse=True)
+def clear_db(app):
+    """Clear the mock database before EVERY test for complete isolation."""
+    DB.get_collection(USER_COLLECTION).delete_many({})
+    DB.get_collection(CLASS_COLLECTION).delete_many({})
+    DB.get_collection(BOOKING_COLLECTION).delete_many({})
+    yield
