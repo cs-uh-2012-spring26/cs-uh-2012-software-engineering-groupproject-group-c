@@ -176,6 +176,58 @@ To send to any email without verification, request production access  from AWS S
 
 ---
 
+---
+
+## Running Tests
+
+### Setup
+Make sure your virtual environment is active and dependencies are installed:
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Run All Tests
+```bash
+pytest tests/ -v
+```
+
+### Run with Statement Coverage
+```bash
+pytest tests/ --cov=app --cov-report=term-missing
+```
+
+### Run with Branch Coverage
+```bash
+pytest tests/ --cov=app --cov-report=term-missing --cov-branch
+```
+
+### Run with HTML Coverage Report
+```bash
+pytest tests/ --cov=app --cov-report=html --cov-branch
+open htmlcov/index.html
+```
+
+### Test Structure
+
+| Test File               | What it covers                              |
+|-------------------------|---------------------------------------------|
+| `test_auth.py`          | Register and login endpoints                |
+| `test_bookings.py`      | Class booking logic                         |
+| `test_classes.py`       | Class creation and member viewing           |
+| `test_reminders.py`     | Email reminder endpoint and email service   |
+| `test_config.py`        | App configuration                           |
+| `test_db_utils.py`      | Database utility functions                  |
+
+### Testing Notes
+
+- Tests use **mongomock** — no real MongoDB connection needed
+- Tests use **mocked email service** — no real emails are sent during testing
+- All AWS SES calls are mocked, so no AWS credentials are needed to run tests
+- Test files are located in `tests/unit/`
+
+---
+
 ## Virtual Environment Management
 
 * Activate: `source .venv/bin/activate`
