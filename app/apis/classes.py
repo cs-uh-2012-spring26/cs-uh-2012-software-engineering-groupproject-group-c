@@ -6,6 +6,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
 
 import app.db.classes as cls_db
+from app.apis.email_service import send_email
 
 api = Namespace('classes', description='Fitness class operations')
 
@@ -148,69 +149,65 @@ class ClassMembers(Resource):
             'booked_members': members,
         }, 200
 
-@api.route('/<string:class_id>/send-reminder')
-class SendReminder(Resource):
+@api.route('/<string:class_id>/remind')
+class SendReminders(Resource):
 
     @jwt_required()
-    @api.response(200, 'Reminders sent successfully')
-    @api.response(403, 'Forbidden – trainer or admin role required')
-    @api.response(404, 'Class not found')
+    @api.response(200,  'Reminder emails sent')
+    @api.response(403,  'Forbidden – trainer or admin role required')
+    @api.response(404,  'Class not found')
     def post(self, class_id):
         """
-        Send reminder emails to all members who booked this class.
-        Trainer or admin only.
+        Send reminder emails to all members booked in a class.
 
-        Returns the email body for each member in the response (for testing/demo purposes).
+        Trainer or admin only. Emails are sent immediately on request —
+        no scheduling required. Each email includes the full class details:
+        name, instructor, date/time, location, and description.
         """
-
-        # Check role
         claims = get_jwt()
         if claims['role'] not in ('trainer', 'admin'):
             api.abort(403, 'Trainer or admin role required.')
 
-        # Fetch class
+        # Fetch class details
         cls = cls_db.get_class_by_id(class_id)
         if cls is None:
             api.abort(404, 'Class not found.')
 
-        # Get booked members
         booked_members = cls.get('booked_members', [])
         if not booked_members:
-            return {'message': 'No members booked for this class.'}, 200
+            return {
+                'message':     'No members are booked for this class.',
+                'sent':        [],
+                'failed':      [],
+            }, 200
 
-        sent_emails = []
+        sent   = []
+        failed = []
 
-        # Construct and “send” email to each booked member
         for member_email in booked_members:
-            email_subject = f"Reminder: {cls['name']} on {cls['schedule']}"
-            email_body = f"""
-Hello {member_email},
+            subject = f"Reminder: {cls['name']} on {cls['schedule']}"
+            body = (
+                f"Hello,\n\n"
+                f"This is a reminder for the fitness class you booked:\n\n"
+                f"  Class Name : {cls['name']}\n"
+                f"  Instructor : {cls['instructor']}\n"
+                f"  Date/Time  : {cls['schedule']}\n"
+                f"  Location   : {cls['location']}\n"
+                f"  Description: {cls.get('description') or 'N/A'}\n"
+                f"  Spots Filled: {cls['enrolled']} / {cls['capacity']}\n\n"
+                f"See you there!\n"
+            )
 
-This is a reminder for the fitness class you booked:
+            try:
+                send_email(member_email, subject, body)
+                sent.append(member_email)
+            except Exception as exc:
+                # Log failure but continue sending to remaining members
+                print(f"[remind] Failed to send to {member_email}: {exc}")
+                failed.append({'email': member_email, 'reason': str(exc)})
 
-Class Name: {cls['name']}
-Instructor: {cls['instructor']}
-Date/Time: {cls['schedule']}
-Location: {cls['location']}
-Description: {cls.get('description', 'No description')}
-
-See you there!
-"""
-            # Simulate sending email (print/log)
-            print(f"Sending email to {member_email}:\n{email_body}")
-
-            # Collect email info to return in response
-            sent_emails.append({
-                "to": member_email,
-                "subject": email_subject,
-                "body": email_body.strip()  # strip extra whitespace
-            })
-
-        # Return all emails in the JSON response for testing/demo
         return {
-            "message": f"Reminder emails sent to {len(sent_emails)} members.",
-            "class_id": class_id,
-            "class_name": cls['name'],
-            "schedule": cls['schedule'],
-            "emails": sent_emails
+            'message': f'Reminders sent: {len(sent)} succeeded, {len(failed)} failed.',
+            'sent':    sent,
+            'failed':  failed,
         }, 200
