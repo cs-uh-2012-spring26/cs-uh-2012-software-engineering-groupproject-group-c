@@ -149,7 +149,7 @@ class ClassMembers(Resource):
             'booked_members': members,
         }, 200
 
-@api.route('/<string:class_id>/remind')
+@api.route('/<string:class_id>/send-reminder')
 class SendReminders(Resource):
 
     @jwt_required()
@@ -176,7 +176,7 @@ class SendReminders(Resource):
         booked_members = cls.get('booked_members', [])
         if not booked_members:
             return {
-                'message':     'No members are booked for this class.',
+                'message':     'No members booked for this class.',
                 'sent':        [],
                 'failed':      [],
             }, 200
