@@ -1,0 +1,36 @@
+name: CI Testing Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Pytest and Coverage
+        env:
+          MONGO_URI: "mongodb://localhost:27017"
+          DB_NAME: "fitness_test_db"
+          MOCK_DB: "true"
+          DEBUG: "true"
+          JWT_SECRET_KEY: "super-secret-test-key"
+        run: |
+          pytest -vv --cov-config=.coveragerc --cov=app tests/ --cov-report=term-missing
