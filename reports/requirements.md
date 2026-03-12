@@ -17,3 +17,5 @@
 
 ### 2.1 Use Case Diagram
 
+![Use Case Diagram](S2_UML.png)
+
