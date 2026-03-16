@@ -113,7 +113,7 @@
 
 **Alternative Flows:**
 
-* **2a/3a. Unauthorized Role:** If the token is invalid/missing (401 Unauthorized), or if a Staff member (Admin/Trainer) attempts to book a class, the system aborts and returns a 403 Forbidden error stating only members can book.
+* **2a/3a. Unauthorized Role:** If the token is invalid/missing (401 Unauthorized), or if a guest or Staff member (Admin/Trainer) attempts to book a class, the system aborts and returns a 403 Forbidden error stating only members can book.
 
 * **4a. Class Not Found:** If the provided class ID does not match any existing class in the database, the system aborts and returns a 404 Not Found error.
 
