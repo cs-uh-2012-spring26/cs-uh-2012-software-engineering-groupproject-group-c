@@ -30,8 +30,8 @@ Built with **Flask-RESTX**, **MongoDB**, and **JWT authentication**.
 
 (1) Make sure MongoDB is already running:
 
- - macOS: brew services restart mongodb-community
- - Linux: sudo systemctl restart mongod
+ - macOS: `brew services restart mongodb-community`
+ - Linux: `sudo systemctl restart mongod`
 
 (2) Follow the instructions in .samplenv and create a `.env` file in the project root with following variables:
 
