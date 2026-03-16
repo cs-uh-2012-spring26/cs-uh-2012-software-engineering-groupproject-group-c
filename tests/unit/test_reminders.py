@@ -2,7 +2,7 @@ from http import HTTPStatus
 import pytest
 from unittest.mock import patch, MagicMock
 import os
-from app.apis.email_service import send_email
+from app.services.email_service import send_email
 
 # =========================================================================== #
 # FIXTURES
