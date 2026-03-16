@@ -17,6 +17,29 @@
     * **Authentication Requirements:** We learned that while the system demands a strong password during registration (requiring uppercase, lowercase, and numbers), we do not need to implement an email verification step or a "forgot password" flow. 
     * **System Feedback:** We clarified that the system does not require automated SMS/email notifications upon booking; a simple "booking successful" API response is sufficient for the user experience in this iteration.
 
+**Sprint 2 Clarifications**
+
+For Sprint 2, we reached out to the TA to clarify reminder email requirements:
+
+- When should reminder emails be sent?
+
+- Clarification: Emails should be sent manually by the admin or trainer. Timing is flexible. Automation is not required for this sprint.
+
+- What information should the reminder email include?
+
+- The email should include all relevant class information, including:
+
+   - Class name
+   
+   - Date and time
+   
+   - Location
+   
+   - Any additional class-specific details
+
+These clarifications ensure the reminder email feature can be implemented manually without automation in Sprint 2, while still providing complete information to the participants.
+
+
 ## 2. Requirements Specification
 
 ### 2.1 Use Case Diagram
@@ -189,3 +212,57 @@
 **Postconditions:**
 
 * Reminder emails are successfully dispatched to the enrolled members. The database state remains completely unchanged.
+
+---
+
+# Extra Feature: User Login/Authentication
+
+### Use Case Name: Login/Register User
+
+**Actor:** New User (Admin, Member, or Trainer)
+
+**Preconditions:**
+The user must not already have an account registered with the provided email address.
+
+---
+
+### Main Success Scenario:
+
+1. The user sends a request to create a new account by calling the `/register` endpoint.
+2. The system receives the request containing the user details: **username, email, password, phone number, and role**.
+3. The system validates that all required fields are present.
+4. The system validates the password strength, ensuring it contains at least **8 characters, one uppercase letter, one lowercase letter, and one number**.
+5. The system validates the phone number format to ensure it contains **exactly 10 digits**.
+6. The system verifies that the provided role is one of **Admin, Member, or Trainer**.
+7. The system checks whether the provided email already exists in the database.
+8. The system creates a new user account and stores it in the database.
+9. The system returns a **201 Created** response with the new user ID.
+
+---
+
+### Alternative Flows:
+
+**3a. Missing Fields:**
+If required fields (username, email, password, phone, or role) are missing, the system aborts the operation and returns a **400 Bad Request** error indicating which fields are missing.
+
+**4a. Weak Password:**
+If the password does not meet the required strength criteria, the system aborts the operation and returns a **400 Bad Request** error explaining the password requirements.
+
+**5a. Invalid Phone Number:**
+If the phone number is not a valid 10-digit number, the system aborts the operation and returns a **400 Bad Request** error.
+
+**6a. Invalid Role:**
+If the provided role is not **Admin, Member, or Trainer**, the system aborts the operation and returns a **400 Bad Request** error.
+
+**7a. Email Already Registered:**
+If the email already exists in the system, the operation is aborted and a **400 Bad Request** error is returned.
+
+---
+
+### Postconditions:
+
+A new user account is successfully stored in the system database and can be used to authenticate and access system features.
+
+---
+
+
