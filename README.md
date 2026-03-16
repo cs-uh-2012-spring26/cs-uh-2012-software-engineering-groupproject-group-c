@@ -1,3 +1,5 @@
+[![CI Testing Pipeline](https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group-c/actions/workflows/ci.yml/badge.svg)](https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group-c/actions/workflows/ci.yml)
+
 # Fitness Classes API
 
 A REST API for managing **users**, **fitness classes**, **bookings**, and sending **reminder emails**.  
