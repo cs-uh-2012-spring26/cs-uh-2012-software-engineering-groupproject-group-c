@@ -1,19 +1,19 @@
 # IMPORTANT: This is a sample template provided as a starting point for your .env file
-# 
-# In practice, .env files should NEVER be committed to version control
-# as they often contain sensitive information (API keys, passwords, etc.)
-#
-# Copy this file into a file named .env and edit it as needed
-# Your new .env file will not be tracked by git by default (see .gitignore)
-# Thus, you are the only one who can see any changes made to your .env file
-# In your Running instructions in the README file, let us know what environment
-# variables are needed to run your code
 
+# Copy this file into a file named .env and edit it as needed
 
 # database configs
 MONGO_URI="mongodb://localhost:27017"
 DB_NAME="eventsref_dev"
 MOCK_DB="false"
+# change the JWT key to any random string but keep it a secret. 
+JWT_SECRET_KEY="any-string" 
 
 # server config
 DEBUG="true"
+
+# AWS Setup
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=eu-north-1        
+SES_SENDER_EMAIL=your_verified@email.com
