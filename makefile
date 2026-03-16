@@ -37,12 +37,12 @@ dev_env:
 	fi; \
 	$(ACTIVATE) && pip install --upgrade pip setuptools wheel && pip install -r $(REQ_DIR)/requirements-dev.txt && pip install pytest pytest-cov
 
-pytests: dev_env
+pytests: 
 	$(ACTIVATE) && $(TEST_CMD)
 
 tests: pytests
 
-run_local_server: dev_env tests
+run_local_server: tests
 	$(ACTIVATE) && FLASK_APP=app flask run --debug --host=0.0.0.0 --port=8000
 
 clean:
