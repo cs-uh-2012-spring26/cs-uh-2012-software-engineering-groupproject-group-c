@@ -228,7 +228,7 @@ These clarifications ensure the reminder email feature can be implemented manual
 
 **Preconditions:**  
 - Email is not already registered.  
-- User will provide **username, password, phone number, and role**.
+- User will provide **username, email, password, phone number, and role**.
 
 **Main Success Scenario:**  
 1. The unregistered user sends a request to the `/register` endpoint with all required fields.  
