@@ -217,53 +217,64 @@ These clarifications ensure the reminder email feature can be implemented manual
 
 # Extra Feature: User Login/Authentication
 
-### Use Case Name: Login/Register User
-
-**Actor:** Unregistered User/Guest (someone who does not yet have an account)
-
-**Preconditions:**
-The user must not already have an account registered with the provided email address.
-The user will select a role during registration (Admin, Member, or Trainer).
+## Use Case Name: Register and Login User
 
 ---
 
-### Main Success Scenario:
+## **Registration**
 
-1. The user sends a request to create a new account by calling the `/register` endpoint.
-2. The system receives the request containing the user details: **username, email, password, phone number, and role**.
-3. The system validates that all required fields are present.
-4. The system validates the password strength, ensuring it contains at least **8 characters, one uppercase letter, one lowercase letter, and one number**.
-5. The system validates the phone number format to ensure it contains **exactly 10 digits**.
-6. The system verifies that the provided role is one of **Admin, Member, or Trainer**.
-7. The system checks whether the provided email already exists in the database.
-8. The system creates a new user account and stores it in the database.
+**Actor:** Unregistered User/Guest (someone who does not yet have an account)  
+- At registration, the user does not yet have a role, but must select one: **Admin, Member, or Trainer**.
+
+**Preconditions:**  
+- Email is not already registered.  
+- User will provide **username, password, phone number, and role**.
+
+**Main Success Scenario:**  
+1. The unregistered user sends a request to the `/register` endpoint with all required fields.  
+2. The system receives the request containing: **username, email, password, phone, role**.  
+3. The system validates that all required fields are present.  
+4. The system validates the password strength: at least **8 characters**, including **one uppercase letter, one lowercase letter, and one number**.  
+5. The system validates the phone number format to ensure it contains **exactly 10 digits**.  
+6. The system verifies that the provided role is one of **Admin, Member, or Trainer**.  
+7. The system checks whether the email already exists in the database.  
+8. The system creates a new user account and stores it in the database.  
 9. The system returns a **201 Created** response with the new user ID.
 
----
+**Alternative Flows:**  
+- **Missing Fields:** If any required field is missing, return **400 Bad Request** with a message indicating the missing fields.  
+- **Weak Password:** If the password does not meet the strength requirements, return **400 Bad Request**.  
+- **Invalid Phone Number:** If the phone number is not 10 digits, return **400 Bad Request**.  
+- **Invalid Role:** If the role is not one of Admin, Member, or Trainer, return **400 Bad Request**.  
+- **Email Already Registered:** If the email is already in use, return **400 Bad Request**.
 
-### Alternative Flows:
-
-**3a. Missing Fields:**
-If required fields (username, email, password, phone, or role) are missing, the system aborts the operation and returns a **400 Bad Request** error indicating which fields are missing.
-
-**4a. Weak Password:**
-If the password does not meet the required strength criteria, the system aborts the operation and returns a **400 Bad Request** error explaining the password requirements.
-
-**5a. Invalid Phone Number:**
-If the phone number is not a valid 10-digit number, the system aborts the operation and returns a **400 Bad Request** error.
-
-**6a. Invalid Role:**
-If the provided role is not **Admin, Member, or Trainer**, the system aborts the operation and returns a **400 Bad Request** error.
-
-**7a. Email Already Registered:**
-If the email already exists in the system, the operation is aborted and a **400 Bad Request** error is returned.
+**Postconditions:**  
+- A new user account is stored in the database.  
+- The user can now log in and access system features.
 
 ---
 
-### Postconditions:
+## **Login**
 
-A new user account is successfully stored in the system database and can be used to authenticate and access system features.
+**Actor:** Registered User/Trainer or Member (someone who already has an account)  
+- At login, the user already has a **role assigned** (Admin, Member, or Trainer).
 
----
+**Preconditions:**  
+- User must have a registered account.  
+- Correct email and password are required.
+
+**Main Success Scenario:**  
+1. The registered user sends a request to the `/login` endpoint with **email and password**.  
+2. The system verifies that the email exists and the password matches the stored hash.  
+3. The system generates a **JWT token** that includes the user’s role as an additional claim.  
+4. The system returns a **200 OK** response with the token and the user’s role.  
+
+**Alternative Flows:**  
+- **Missing Fields:** If email or password is missing, return **400 Bad Request**.  
+- **Invalid Credentials:** If email does not exist or password is incorrect, return **401 Unauthorized**.  
+
+**Postconditions:**  
+- The user receives a JWT token, which can be used for authentication in subsequent API requests.  
+- The role information in the token can be used for authorization in protected endpoints.
 
 
