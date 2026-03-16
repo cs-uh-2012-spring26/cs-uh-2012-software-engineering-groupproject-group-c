@@ -26,7 +26,12 @@ Built with **Flask-RESTX**, **MongoDB**, and **JWT authentication**.
 
 ## Environment Setup
 
-1. Create a `.env` file in the project root with:
+(1) Make sure MongoDB is already running:
+
+ - macOS: brew services restart mongodb-community
+ - Linux: sudo systemctl restart mongod
+
+(2) Follow the instructions in .samplenv and create a `.env` file in the project root with following variables:
 
 ```env
 MONGO_URI="mongodb://localhost:27017"
@@ -34,25 +39,27 @@ DB_NAME="fitness_db"
 MOCK_DB="false"
 DEBUG="true"
 JWT_SECRET_KEY="your-secret-key"
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=eu-north-1        # must match the region where you verified identities
+SES_SENDER_EMAIL=your_verified@email.com
+```
+
+(3) Create virtual environment:
 
 ```
-Keep JWT_SECRET_KEY secret, it signs all tokens.
-
+make dev_env
 ```
-
-2. Create virtual environment and install dependencies:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt        # runtime dependencies
-pip install -r requirements-dev.txt    # dev/test dependencies
-```
+Run the command above and it will create virtual environment as well as install all the dependencies. 
 
 ---
 
 ## Running the Server
+
+```
+make run_local_server
+```
+This will run the tests first and then run the server. For running the server without the tests, use the command below:
 
 ```bash
 python -m flask --app app run --debug --host=0.0.0.0 --port 8000
@@ -62,51 +69,7 @@ python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 * Stop server: `Ctrl+C`
 
 ---
-
-## Authentication
-
-### Endpoints (/Authentication)
-
-| Method | Endpoint    | Auth | Description                                  |
-| ------ | ----------- | ---- | -------------------------------------------- |
-| POST   | `/register` | None | Register a new user (Admin, Member, Trainer) |
-| POST   | `/login`    | None | Login and receive JWT token                  |
-
-**Password policy:** ≥8 characters, at least one uppercase, one lowercase, one digit.
-
----
-
-## Fitness Classes
-
-### Endpoints (/classes)
-
-| Method | Endpoint                            | Auth          | Description               |
-| ------ | ----------------------------------- | ------------- | ------------------------- |
-| GET    | `/classes/`                         | None          | List all upcoming classes |
-| POST   | `/classes/`                         | Trainer/Admin | Create a new class        |
-| POST   | `/classes/<class_id>/book`          | Member        | Book a spot in a class    |
-| GET    | `/classes/<class_id>/members`       | Trainer/Admin | View booked members       |
-| POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminder emails      |
-
-
-
-## Workflow Example
-
-1. Register as a **Member** or **Trainer/Admin**
-2. Login → copy the JWT token
-3. Authorize in Swagger using `Bearer <JWT>`
-4. Create a class (Trainer/Admin) → `POST /classes/`
-5. Book a class (Member) → `POST /classes/<class_id>/book`
-6. View booked members (Trainer/Admin) → `GET /classes/<class_id>/members`
-7. Send reminders (Trainer/Admin) → `POST /classes/<class_id>/send-reminder`
-
----
-
-## Swagger UI
-
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for interactive API documentation.
-
-### Authenticate in Swagger
+## Authentication in Swagger
 
 1. Register through `POST /Authentication/register`
 2. Login through `POST /Authentication/login` to receive `access_token`
@@ -174,39 +137,60 @@ The response will show which emails succeeded and which failed:
 AWS SES sandbox mode only allows sending to verified email addresses. 
 To send to any email without verification, request production access  from AWS SES console → Account Dashboard → Request Production Access.
 
----
+
 
 ---
 
 ## Running Tests
 
 ### Setup
-Make sure your virtual environment is active and dependencies are installed:
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+Make sure your virtual environment is active and dependencies are installed
 
 ### Run All Tests
 ```bash
-pytest tests/ -v
+make tests
 ```
+You can see a visual report by viewing /htmlcov/index.html
 
-### Run with Statement Coverage
-```bash
-pytest tests/ --cov=app --cov-report=term-missing
-```
+## Endpoints
 
-### Run with Branch Coverage
-```bash
-pytest tests/ --cov=app --cov-report=term-missing --cov-branch
-```
+### Authentication
 
-### Run with HTML Coverage Report
-```bash
-pytest tests/ --cov=app --cov-report=html --cov-branch
-open htmlcov/index.html
-```
+| Method | Endpoint    | Auth | Description                                  |
+| ------ | ----------- | ---- | -------------------------------------------- |
+| POST   | `/register` | None | Register a new user (Admin, Member, Trainer) |
+| POST   | `/login`    | None | Login and receive JWT token                  |
+
+**Password policy:** ≥8 characters, at least one uppercase, one lowercase, one digit.
+
+---
+
+
+### Classes
+
+| Method | Endpoint                            | Auth          | Description               |
+| ------ | ----------------------------------- | ------------- | ------------------------- |
+| GET    | `/classes/`                         | None          | List all upcoming classes |
+| POST   | `/classes/`                         | Trainer/Admin | Create a new class        |
+| POST   | `/classes/<class_id>/book`          | Member        | Book a spot in a class    |
+| GET    | `/classes/<class_id>/members`       | Trainer/Admin | View booked members       |
+| POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminder emails      |
+
+
+
+## Workflow Example
+
+1. Register as a **Member** or **Trainer/Admin**
+2. Login → copy the JWT token
+3. Authorize in Swagger using `Bearer <JWT>`
+4. Create a class (Trainer/Admin) → `POST /classes/`
+5. Book a class (Member) → `POST /classes/<class_id>/book`
+6. View booked members (Trainer/Admin) → `GET /classes/<class_id>/members`
+7. Send reminders (Trainer/Admin) → `POST /classes/<class_id>/send-reminder`
+
+---
+
+
 
 ### Test Structure
 
@@ -221,8 +205,8 @@ open htmlcov/index.html
 
 ### Testing Notes
 
-- Tests use **mongomock** — no real MongoDB connection needed
-- Tests use **mocked email service** — no real emails are sent during testing
+- Tests use **mongomock** - no real MongoDB connection needed
+- Tests use **mocked email service** - no real emails are sent during testing
 - All AWS SES calls are mocked, so no AWS credentials are needed to run tests
 - Test files are located in `tests/unit/`
 
@@ -233,7 +217,13 @@ open htmlcov/index.html
 * Activate: `source .venv/bin/activate`
 * Deactivate: `deactivate`
 
----
+
+
+## Contributors 
+
+- Muhammad Shahzaib Hassan
+- Sadaf Habib
+- Muhammad Umair Hafeez
 
 ## Additional Documentation
 
@@ -244,6 +234,3 @@ See `/docs/BestPractices.md` for:
 * Coding style recommendations
 
 ---
-
-```
-```
