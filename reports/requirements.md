@@ -219,10 +219,11 @@ These clarifications ensure the reminder email feature can be implemented manual
 
 ### Use Case Name: Login/Register User
 
-**Actor:** New User (Admin, Member, or Trainer)
+**Actor:** Unregistered User/Guest (someone who does not yet have an account)
 
 **Preconditions:**
 The user must not already have an account registered with the provided email address.
+The user will select a role during registration (Admin, Member, or Trainer).
 
 ---
 
