@@ -61,10 +61,12 @@ Run the command above and it will create virtual environment as well as install 
 ```
 make run_local_server
 ```
-This will run the tests first and then run the server. For running the server without the tests, use the command below:
+This will run the tests first and then run the server. 
+For running the server without the tests, use the command below after running `make dev_env`:
 
 ```bash
-python -m flask --app app run --debug --host=0.0.0.0 --port 8000
+source .venv/bin/activate
+FLASK_APP=app flask run --debug --host=0.0.0.0 --port 8000       
 ```
 
 * Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for Swagger UI
