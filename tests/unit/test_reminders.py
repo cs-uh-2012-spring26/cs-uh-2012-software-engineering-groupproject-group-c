@@ -2,7 +2,7 @@ from http import HTTPStatus
 import pytest
 from unittest.mock import patch, MagicMock
 import os
-from app.apis.email_service import send_email
+from app.services.email_service import send_email
 
 # =========================================================================== #
 # FIXTURES
@@ -74,7 +74,7 @@ def test_send_reminder_no_bookings(client, setup_class_empty, trainer_token):
 # TESTS: email_service.py
 # =========================================================================== #
 
-@patch('app.apis.email_service.boto3.client')
+@patch('app.services.email_service.boto3.client')
 def test_send_email_success(mock_boto_client):
     """Test successful email sending via SES."""
     mock_ses = MagicMock()
@@ -87,17 +87,17 @@ def test_send_email_success(mock_boto_client):
         'AWS_REGION': 'us-east-1',
         'SES_SENDER_EMAIL': 'sender@test.com'
     }):
-        import app.apis.email_service as svc
+        import app.services.email_service as svc
         svc._ses_client = None
 
         result = send_email('recipient@test.com', 'Test Subject', 'Test Body')
         assert result['MessageId'] == 'test-id-123'
 
 
-@patch('app.apis.email_service.boto3.client')
+@patch('app.services.email_service.boto3.client')
 def test_send_email_missing_sender(mock_boto_client):
     """Test RuntimeError when SES_SENDER_EMAIL is not set."""
-    import app.apis.email_service as svc
+    import app.services.email_service as svc
     svc._ses_client = None
 
     with patch.dict(os.environ, {}, clear=True):
@@ -108,7 +108,7 @@ def test_send_email_missing_sender(mock_boto_client):
             assert 'SES_SENDER_EMAIL' in str(e)
 
 
-@patch('app.apis.email_service.boto3.client')
+@patch('app.services.email_service.boto3.client')
 def test_send_email_ses_failure(mock_boto_client):
     """Test that SES ClientError propagates correctly."""
     from botocore.exceptions import ClientError
@@ -125,7 +125,7 @@ def test_send_email_ses_failure(mock_boto_client):
         'AWS_REGION': 'us-east-1',
         'SES_SENDER_EMAIL': 'sender@test.com'
     }):
-        import app.apis.email_service as svc
+        import app.services.email_service as svc
         svc._ses_client = None
 
         try:

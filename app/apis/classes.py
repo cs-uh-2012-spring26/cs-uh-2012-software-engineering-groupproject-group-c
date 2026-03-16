@@ -6,7 +6,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
 
 import app.db.classes as cls_db
-from app.apis.email_service import send_email
+from app.services.email_service import send_email
 
 api = Namespace('classes', description='Fitness class operations')
 
