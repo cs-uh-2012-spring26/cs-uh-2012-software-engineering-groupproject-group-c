@@ -82,7 +82,7 @@ python -m flask --app app run --debug --host=0.0.0.0 --port 8000
 
 ---
 
-## Email Reminder Feature Setup
+## Email Reminder Feature Setup (Feature 5)
 
 This feature uses AWS Simple Email Service (SES) to send reminder emails to members booked in a fitness class.
 
@@ -100,13 +100,16 @@ Since SES is in sandbox mode, both the sender and recipient emails must be verif
 3. Go to **Configuration → Identities → Create Identity**
 4. Select **Email address**, enter the email, click **Create Identity**
 5. Check the inbox and click the verification link AWS sends
-6. Repeat for every email address you want to send reminders to
+6. Repeat for all trainer/admin sender emails and member recipient emails you plan to test with.
+7. Select the email address you want to send reminders from (must be verified) and set it as SES_SENDER_EMAIL in .env.
+8. Select the AWS SES region where that verified email identity exists and set it as AWS_SES_REGION in .env.
 
 ### Step 2: Create AWS Access Keys
 
 1. Go to AWS Console → click your name (top right) → **Security Credentials**
 2. Scroll to **Access Keys** → **Create Access Key**
-3. Copy the `Access Key ID` and `Secret Access Key`
+3. Copy the `Access Key ID` and `Secret Access Key` into .env as AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY respectively.
+
 
 ### Step 3: Configure Environment Variables
 
@@ -125,19 +128,10 @@ Call the remind endpoint as a trainer or admin:
 POST /classes/<class_id>/remind
 ```
 
-The response will show which emails succeeded and which failed:
-```json
-{
-  "message": "Reminders sent: 2 succeeded, 0 failed.",
-  "sent": ["member1@email.com", "member2@email.com"],
-  "failed": []
-}
-```
-
 ### Note on Sandbox Mode
 
-AWS SES sandbox mode only allows sending to verified email addresses. 
-To send to any email without verification, request production access  from AWS SES console → Account Dashboard → Request Production Access.
+Sandbox mode restricts sending emails to only verified addresses.
+
 
 
 
