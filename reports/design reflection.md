@@ -17,13 +17,13 @@ The team collectively discussed how the current system design would impact the i
 
 All final materials, including executive summary, diagrams and analysis, were compiled, and uploaded to GitHub by Sadaf.
 
-##TASK 1
+## TASK 1
 
 
-##TASK2 
+## TASK2 
 
 
-##TASK3
+## TASK3
 
 
-##TASK4
+## TASK4
