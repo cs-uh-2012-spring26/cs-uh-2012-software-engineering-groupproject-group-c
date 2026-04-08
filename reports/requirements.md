@@ -44,7 +44,7 @@ These clarifications ensure the reminder email feature can be implemented manual
 
 ### 2.1 Use Case Diagram
 
-![Use Case Diagram](S2_UML.png)
+![Use Case Diagram](S3A_UML.png)
 
 
 ### 2.2 Use Cases
