@@ -3,7 +3,7 @@
 For this deliverable, our team combined reverse engineering tools with manual analysis to understand and document the current system design.
 
 For Task 1 (Design Diagrams):
-- Umair used **pyreverse** to generate the class diagram representing the main classes and their associations.
+- Umair used **Mermaid code** to generate the class diagram representing the main classes and their associations.
 - Shahzaib used the **Visual Studio PyReverseSequence Plugin** to generate the sequence diagram for the *Book a Class* endpoint.
 - Sadaf used the **Visual Studio PyReverseSequence Plugin** to generate the sequence diagram for the *Send Reminders* endpoint.
 
