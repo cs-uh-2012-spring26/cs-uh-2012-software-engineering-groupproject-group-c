@@ -195,9 +195,10 @@ These clarifications ensure the reminder email feature can be implemented manual
 2. The system validates the authorization token to ensure the trainer is securely logged in (Authentication Check).
 3. The system inspects the token payload to verify the user possesses either the "Trainer" or "Admin" role (Authorization Check).
 4. The system queries the database to confirm the class ID exists and retrieves the class details (name, instructor, schedule, location, description).
-5. The system retrieves the booked_members list containing the enrolled users' email addresses.
-6. The system constructs and successfully dispatches an email containing the full class details to each booked member via the external email service.
-7. The system returns a 200 OK status code along with a JSON payload summarizing the number of successfully sent emails and any failures.
+5. The system verifies that the class is scheduled for a future time.
+6. The system retrieves the booked_members list containing the enrolled users' email addresses.
+7. The system constructs and successfully dispatches an email containing the full class details to each booked member via the external email service.
+8. The system returns a 200 OK status code along with a JSON payload summarizing the number of successfully sent emails and any failures.
 
 **Alternative Flows:**
 
@@ -205,9 +206,11 @@ These clarifications ensure the reminder email feature can be implemented manual
 
 * **4a. Class Not Found:** If the provided class ID does not map to an existing fitness class in the database, the system aborts and returns a 404 Not Found error.
 
-* **5a. No Booked Members:** If the class exists but has no members enrolled, the system returns a 200 OK status code with a message indicating that there are no members to remind, without attempting to send any emails.
+* **5a.Class Already Ended:** If the class has already ended or its scheduled date is in the past, the system aborts the operation and returns a 400 Bad Request with an appropriate message. 
 
-* **6a. Partial Email Failure:** If the system fails to send an email to a specific member (e.g., due to an SMTP or third-party service error), it logs the failure, continues sending emails to the remaining members in the list, and includes the failed email addresses in the final response payload.
+* **6a. No Booked Members:** If the class exists but has no members enrolled, the system returns a 200 OK status code with a message indicating that there are no members to remind, without attempting to send any emails.
+
+* **7a. Partial Email Failure:** If the system fails to send an email to a specific member (e.g., due to an SMTP or third-party service error), it logs the failure, continues sending emails to the remaining members in the list, and includes the failed email addresses in the final response payload.
 
 **Postconditions:**
 
