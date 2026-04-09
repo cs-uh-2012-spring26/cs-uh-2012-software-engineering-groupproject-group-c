@@ -88,7 +88,7 @@ The Fix: Introduce a service layer between the API and DB layers to absorb chang
 
 ## TASK3
 
-1. Duplicated Code File: app/db/classes.py | Methods: get_class_by_id(), book_class(), get_booked_members()
+1. Duplicated Code File: app/db/classes.py | Methods: get_class_by_id() - line 74-77, book_class() - 110-113, get_booked_members() - line 161-164
 
 ![3.1](3.1.png)
 
@@ -97,14 +97,14 @@ This identical try/except block for parsing MongoDB ObjectIDs is repeated across
 
 The Fix: Extract into a single private helper function _parse_id(class_id: str) and call it from each method.
 
-2. Long Method File: app/apis/classes.py | Method: SendReminders.post()
+2. Long Method File: app/apis/classes.py | Method: SendReminders.post() - line 153-224
 
 ![3.2](3.2.png)
 
 This single method spans roughly 45 lines and handles HTTP authorization, database fetching, past-class validation, email subject and body construction, a send loop with per-recipient error handling, and result aggregation. A method should do one thing and be readable at a glance.
 The Fix: Extract the email templating and send loop into a dedicated service function such as EmailService.send_class_reminders(cls_data, members).
 
-3. Dead Code (Unused Imports) File: app/apis/classes.py
+3. Dead Code (Unused Imports) File: app/apis/classes.py - line 6
 
 ![3.3](3.3.png)
 
@@ -114,14 +114,14 @@ The Fix: Remove all unused imports. The corrected import should be:
     from flask_jwt_extended import jwt_required, get_jwt
 
 
-4. Magic Strings File: app/apis/classes.py | Methods: ClassList.post(), ClassMembers.get(), SendReminders.post()
+4. Magic Strings File: app/apis/classes.py | Methods: ClassList.post() - line 45, ClassMembers.get() - line 139, SendReminders.post() - line 169
 
 ![3.4](3.4.png)
 
 The role strings 'trainer', 'admin', and 'member' appear as raw string literals directly in multiple if statements across the codebase with no central definition. This is prone to silent bugs — a typo like 'trinaer' will not raise an error but will silently break authorization logic. It also makes refactoring difficult as there is no single source of truth.
 The Fix: Define roles as a Python Enum or class constants, for example Roles.TRAINER, and reference those constants throughout the codebase.
 
-5. Comments Smell File: app/apis/classes.py | Method: ClassList.post()
+5. Comments Smell File: app/apis/classes.py | Method: ClassList.post() - line 50 & 56
 
 ![3.5](3.5.png)
 
