@@ -21,11 +21,16 @@ All final materials, including executive summary, diagrams and analysis, were co
 
 **Class Diagram**
 
+![Use Case Diagram](1.1.png)
 
 **Sequence Diagram for booking endpoint**
 
+![Use Case Diagram](1.2.jpeg)
 
 **Sequence Diagram for email reminder endpoint**
+
+![Use Case Diagram](1.3.png)
+
 
 ## TASK2 
 
