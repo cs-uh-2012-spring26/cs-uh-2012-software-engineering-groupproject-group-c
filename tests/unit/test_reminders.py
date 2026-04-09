@@ -29,7 +29,7 @@ def setup_class_empty(client, trainer_token):
     """Creates a class with NO bookings."""
     payload = {
         "name": "Empty Class", "instructor": "TrainerRay",
-        "schedule": "2026-04-10T08:00", "capacity": 10,
+        "schedule": "2027-04-10T08:00", "capacity": 10,
         "location": "Studio B", "description": "No one here yet"
     }
     res = client.post("/classes/", json=payload, headers={"Authorization": f"Bearer {trainer_token}"})

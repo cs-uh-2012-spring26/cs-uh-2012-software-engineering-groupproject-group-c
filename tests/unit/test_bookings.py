@@ -37,7 +37,7 @@ def setup_class(client, trainer_token):
     """Creates a class with a capacity of exactly 1 for testing 'class full'."""
     payload = {
         "name": "Capacity Test Yoga", "instructor": "TrainerDan",
-        "schedule": "2026-03-10T08:00", "capacity": 1,
+        "schedule": "2027-03-10T08:00", "capacity": 1,
         "location": "Studio A", "description": "Small class"
     }
     res = client.post("/classes/", json=payload, headers={"Authorization": f"Bearer {trainer_token}"})
