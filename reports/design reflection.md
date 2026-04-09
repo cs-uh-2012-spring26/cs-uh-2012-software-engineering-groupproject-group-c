@@ -19,6 +19,13 @@ All final materials, including executive summary, diagrams and analysis, were co
 
 ## TASK 1
 
+**Class Diagram**
+
+
+**Sequence Diagram for booking endpoint**
+
+
+**Sequence Diagram for email reminder endpoint**
 
 ## TASK2 
 
