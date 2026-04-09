@@ -19,20 +19,71 @@ All final materials, including executive summary, diagrams and analysis, were co
 
 ## TASK 1
 
-**Class Diagram**
+**Class Diagram - Umair Hafeez**
 
 ![Use Case Diagram](1.1.png)
 
-**Sequence Diagram for booking endpoint**
+**Sequence Diagram for booking endpoint - Muhammad Shahzaib Hassan**
 
 ![Use Case Diagram](1.2.jpeg)
 
-**Sequence Diagram for email reminder endpoint**
+**Sequence Diagram for email reminder endpoint - Sadaf Habib**
 
 ![Use Case Diagram](1.3.png)
 
 
 ## TASK2 
+
+1. Single Responsibility Principle (SRP) File: app/apis/classes.py | Method: SendReminders.post() - line 153 - 224
+
+![Sendreminder]()
+
+The SendReminders.post() method is responsible for HTTP routing, authorization, fetching database records, constructing the email body template, executing the send loop, handling exceptions, and aggregating the result payload — all in one place. SRP states that a module or class should have only one reason to change. This method has at least four. If the marketing team wants to change the wording of the email, a developer must modify the API routing file — which has nothing to do with marketing content.
+
+The Fix: Abstract the email body construction into a dedicated templating helper or service function, and extract the send loop into EmailService.
+
+
+2. Encapsulation / Information Hiding File: app/apis/classes.py | Method: ClassList.get() - line 84 - 89
+
+![Classlist]()
+
+
+Encapsulation dictates that a module should manage its own internal state and hide its details from other layers. Here, get_all_classes() leaks the internal booked_members field, forcing the API layer to manually strip it using pop(). The API layer should not need to know the internal structure of the database document.
+
+The Fix: Pass a flag like get_all_classes(include_members=False) to the DB layer, or use a serialization layer like Marshmallow to define what fields are exposed publicly.
+
+
+3. Open/Closed Principle (OCP) File: app/apis/auth.py - line 73 and app/apis/classes.py - line 45 & 106 
+
+![Roles]()
+
+
+OCP states that software entities should be open for extension but closed for modification. Adding a new role like 'Coach' requires opening and modifying auth.py to add it to the validation list, then opening and modifying every handler in classes.py that needs to allow or restrict that role. Role definitions are scattered as hardcoded strings across multiple files, meaning the system cannot accommodate new roles without touching already-working, already-tested code.
+
+The Fix: Centralize roles into a Python Enum or constants file, and abstract role validation into a reusable decorator such as @require_roles('trainer', 'admin').
+
+
+4. Dependency Inversion Principle (DIP) File: app/db/classes.py | All database operation functions - e.g line 65 - 72
+
+![DIP]()
+
+
+DIP states that high-level modules should not depend on low-level modules — both should depend on abstractions. Every function in db/classes.py is tightly coupled to the concrete global DB object. This creates a rigid dependency hierarchy and makes unit testing difficult, as you cannot easily swap DB for a mock or in-memory database without monkey-patching.
+
+The Fix: Use the Repository Pattern, or refactor the functions into a class where the database connection is injected via the constructor (Dependency Injection).
+
+
+5. Low Coupling File: app/apis/classes.py | Method: SendReminders.post() - line 153 - 224 | Also: app/apis/auth.py | Method: Register.post() - line 40 - 89
+
+
+![LC]()
+![LC]()
+
+
+Both route handlers reach directly into the database layer with no service layer in between. SendReminders.post() calls cls_db.get_class_by_id() and cls_db.get_booked_members() directly, and Register.post() calls users_db.get_user_by_email() and users_db.add_user() directly. Low coupling means changes to one module should not force changes in another. If any database function changes its signature or return value, the route handler breaks immediately.
+
+
+The Fix: Introduce a service layer between the API and DB layers to absorb changes and decouple the two.
 
 
 ## TASK3
