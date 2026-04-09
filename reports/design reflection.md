@@ -36,7 +36,7 @@ All final materials, including executive summary, diagrams and analysis, were co
 
 1. Single Responsibility Principle (SRP) File: app/apis/classes.py | Method: SendReminders.post() - line 153 - 224
 
-![Sendreminder]()
+![Sendreminder](reminder.png)
 
 The SendReminders.post() method is responsible for HTTP routing, authorization, fetching database records, constructing the email body template, executing the send loop, handling exceptions, and aggregating the result payload — all in one place. SRP states that a module or class should have only one reason to change. This method has at least four. If the marketing team wants to change the wording of the email, a developer must modify the API routing file — which has nothing to do with marketing content.
 
@@ -65,7 +65,7 @@ The Fix: Centralize roles into a Python Enum or constants file, and abstract rol
 
 4. Dependency Inversion Principle (DIP) File: app/db/classes.py | All database operation functions - e.g line 65 - 72
 
-![DIP]()
+![DIP](db.png)
 
 
 DIP states that high-level modules should not depend on low-level modules — both should depend on abstractions. Every function in db/classes.py is tightly coupled to the concrete global DB object. This creates a rigid dependency hierarchy and makes unit testing difficult, as you cannot easily swap DB for a mock or in-memory database without monkey-patching.
@@ -77,7 +77,7 @@ The Fix: Use the Repository Pattern, or refactor the functions into a class wher
 
 
 ![LC]()
-![LC]()
+![LC](lc2.png)
 
 
 Both route handlers reach directly into the database layer with no service layer in between. SendReminders.post() calls cls_db.get_class_by_id() and cls_db.get_booked_members() directly, and Register.post() calls users_db.get_user_by_email() and users_db.add_user() directly. Low coupling means changes to one module should not force changes in another. If any database function changes its signature or return value, the route handler breaks immediately.
