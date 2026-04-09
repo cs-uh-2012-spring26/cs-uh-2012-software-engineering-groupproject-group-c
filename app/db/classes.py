@@ -4,6 +4,7 @@ Database operations for fitness classes.
 from bson import ObjectId
 from bson.errors import InvalidId
 import uuid
+from datetime import datetime
 
 from app.db import DB
 from app.db.constants import CLASS_COLLECTION
@@ -115,6 +116,16 @@ def book_class(class_id: str, member_email: str) -> dict:
 
     if cls is None:
         raise ValueError('Class not found.')
+    
+    schedule_str = cls.get('schedule')
+    if schedule_str:
+        try:
+            schedule_dt = datetime.fromisoformat(schedule_str)
+            if schedule_dt < datetime.now():
+                raise ValueError('Cannot book a class that is in the past.')
+        except ValueError as e:
+            if str(e) == 'Cannot book a class that is in the past.':
+                raise
 
     if member_email in cls.get('booked_members', []):
         raise ValueError('You have already booked this class.')
