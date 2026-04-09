@@ -76,7 +76,7 @@ The Fix: Use the Repository Pattern, or refactor the functions into a class wher
 5. Low Coupling File: app/apis/classes.py | Method: SendReminders.post() - line 153 - 224 | Also: app/apis/auth.py | Method: Register.post() - line 40 - 89
 
 
-![LC]()
+![LC](2.1.png)
 ![LC](2.5.2.png)
 
 
