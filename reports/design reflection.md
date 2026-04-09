@@ -88,5 +88,46 @@ The Fix: Introduce a service layer between the API and DB layers to absorb chang
 
 ## TASK3
 
+1. Duplicated Code File: app/db/classes.py | Methods: get_class_by_id(), book_class(), get_booked_members()
+
+![3.1](3.1.png)
+
+
+This identical try/except block for parsing MongoDB ObjectIDs is repeated across three separate methods. If the ID handling logic ever needs to change — for example due to a database migration or ID format change — it must be found and updated in every method individually, risking inconsistency.
+
+The Fix: Extract into a single private helper function _parse_id(class_id: str) and call it from each method.
+
+2. Long Method File: app/apis/classes.py | Method: SendReminders.post()
+
+![3.2](3.2.png)
+
+This single method spans roughly 45 lines and handles HTTP authorization, database fetching, past-class validation, email subject and body construction, a send loop with per-recipient error handling, and result aggregation. A method should do one thing and be readable at a glance.
+The Fix: Extract the email templating and send loop into a dedicated service function such as EmailService.send_class_reminders(cls_data, members).
+
+3. Dead Code (Unused Imports) File: app/apis/classes.py
+
+![3.3](3.3.png)
+
+JWTManager, create_access_token, get_jwt_identity, and set_access_cookies are imported but never used anywhere in classes.py. The only ones actually used are jwt_required and get_jwt. The same issue exists in auth.py. Dead imports add noise, increase cognitive load, and can mislead developers into thinking these are dependencies of the module.
+The Fix: Remove all unused imports. The corrected import should be:
+
+    from flask_jwt_extended import jwt_required, get_jwt
+
+
+4. Magic Strings File: app/apis/classes.py | Methods: ClassList.post(), ClassMembers.get(), SendReminders.post()
+
+![3.4](3.4.png)
+
+The role strings 'trainer', 'admin', and 'member' appear as raw string literals directly in multiple if statements across the codebase with no central definition. This is prone to silent bugs — a typo like 'trinaer' will not raise an error but will silently break authorization logic. It also makes refactoring difficult as there is no single source of truth.
+The Fix: Define roles as a Python Enum or class constants, for example Roles.TRAINER, and reference those constants throughout the codebase.
+
+5. Comments Smell File: app/apis/classes.py | Method: ClassList.post()
+
+![3.5](3.5.png)
+
+These section-marker comments exist only because the method is too long to understand without signposts. According to clean code principles, a comment that explains what a block of code does is a signal that the block should be extracted into a well-named function. The comment is compensating for poor structure rather than adding genuine information.
+
+The Fix: Extract each section into its own well-named private method such as _validate_required_fields(data) and _validate_capacity(data), making the comments unnecessary.
+
 
 ## TASK4
