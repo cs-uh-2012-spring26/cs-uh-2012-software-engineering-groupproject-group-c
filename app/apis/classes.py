@@ -4,6 +4,7 @@ REST API endpoints for fitness class management.
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
+from datetime import datetime
 
 import app.db.classes as cls_db
 from app.services.email_service import send_email
@@ -172,6 +173,16 @@ class SendReminders(Resource):
         cls = cls_db.get_class_by_id(class_id)
         if cls is None:
             api.abort(404, 'Class not found.')
+
+
+        schedule_str = cls.get('schedule')
+        if schedule_str:
+            try:
+                schedule_dt = datetime.fromisoformat(schedule_str)
+                if schedule_dt < datetime.now():
+                    api.abort(400, 'Cannot send reminders for a class that has already ended.')
+            except ValueError:
+                api.abort(400, 'Invalid class schedule format.')
 
         booked_members = cls.get('booked_members', [])
         if not booked_members:
