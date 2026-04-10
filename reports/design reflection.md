@@ -134,3 +134,18 @@ The Fix: Extract each section into its own well-named private method such as _va
 
 
 ## TASK4
+
+Given the new features slated for the next sprint, our current design will significantly hinder their implementation from a maintainability and extensibility standpoint. The codebase currently suffers from tight coupling, missing abstractions, and several violations of the Open/Closed Principle (OCP) and Single Responsibility Principle (SRP), all of which will make adding these new features difficult and prone to bugs.
+
+**Feature 6: Create Recurring Class**
+* **The Problem:** The current `ClassList.post()` method directly handles HTTP request parsing, input validation, and database interactions in a single block. Implementing a feature that allows trainers to create recurring classes (e.g., daily or monthly) would require complex logic to calculate future dates and execute multiple database insertions.
+* **Impact of Design Flaws:** Because we currently lack a dedicated Service Layer (a Low Coupling violation identified in Task 2), adding this logic directly into the API route will exacerbate the existing "Long Method" and SRP violations. It will result in a bloated endpoint that is difficult to read and hard to unit test.
+* **Path Forward:** To implement this extensibly, we must extract the class creation logic out of `app/apis/classes.py` and into a dedicated `ClassService`. This service can handle the business logic of generating recurring schedules before interacting with the database repository.
+
+**Feature 7: Configure Notifications**
+* **The Problem:** The current system hardcodes the concept of "notifications" entirely to "emails." The `SendReminders.post()` method manually constructs the email body and loops through recipients, while `app/services/email_service.py` is tightly bound to AWS SES. Users now need the ability to choose how they receive reminders, such as via Telegram, SMS, or email.
+* **Impact of Design Flaws:** Our current architecture severely violates the Open/Closed Principle (OCP). To support SMS or Telegram, we would be forced to open `SendReminders.post()`, add conditional logic checking user preferences, and import new services directly into the API layer. This also violates the Dependency Inversion Principle (DIP), as the high-level API depends directly on the low-level email service rather than an abstraction.
+* **Path Forward:** We need to introduce a generalized Notification abstraction (e.g., applying the Strategy Pattern). The API should simply call a method like `NotificationService.send_reminders(class_id)`, which then delegates the actual sending to concrete implementations (`EmailNotifier`, `SMSNotifier`, `TelegramNotifier`) based on the user's fetched preferences. Furthermore, the message construction should be abstracted into a templating helper (fixing the SRP violation identified in Task 2) so that different notification channels can format their own specific message lengths and payloads.
+
+**Conclusion**
+Ultimately, the current architecture is not extensible enough to support these new features gracefully. We must prioritize refactoring the API to decouple it from the database and extract business logic into service layers before attempting to build out the new requirements.
