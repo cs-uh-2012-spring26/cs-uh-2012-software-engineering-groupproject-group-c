@@ -25,7 +25,7 @@ All final materials, including executive summary, diagrams and analysis, were co
 
 **Sequence Diagram for booking endpoint - Muhammad Shahzaib Hassan**
 
-![Use Case Diagram](1.2.jpeg)
+![Use Case Diagram](1.2.png)
 
 **Sequence Diagram for email reminder endpoint - Sadaf Habib**
 
