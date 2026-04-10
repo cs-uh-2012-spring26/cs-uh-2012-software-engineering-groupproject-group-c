@@ -10,7 +10,7 @@ For Task 1 (Design Diagrams):
 All diagrams were manually reviewed and refined by the team to ensure accuracy, readability, and alignment with the actual system behavior.
 
 For Tasks 2 and 3 (Design Principles & Code Smells):
-All team members individually analyzed the codebase. We created a shared document where each member contributed identified violations and code smells. These were then discussed as a group, and the most relevant and representative examples were selected. Based on this discussion, Mohammad Umair compiled and wrote the final reflection.
+All team members individually analyzed the codebase. We created a shared document where each member identified violations and code smells. These were then discussed as a group, and the most relevant and representative examples were selected.
 
 For Task 4 (Reflection on New Features):
 The team collectively discussed how the current system design would impact the implementation of the new features, particularly in terms of maintainability and extensibility. Based on this discussion, Mohammad Shahzaib compiled and wrote the final reflection.
