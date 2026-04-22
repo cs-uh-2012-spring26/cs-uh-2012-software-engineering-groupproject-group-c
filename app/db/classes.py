@@ -1,171 +1,122 @@
 """
-Database operations for fitness classes.
+Database operations for fitness classes following the Repository Pattern (DIP).
 """
 from bson import ObjectId
 from bson.errors import InvalidId
 import uuid
 from datetime import datetime
-
-from app.db import DB
 from app.db.constants import CLASS_COLLECTION
 
-# Required fields for creating a class
-REQUIRED_FIELDS = ['name', 'instructor', 'schedule', 'capacity', 'location']
+class ClassRepository:
+    def __init__(self, db_provider):
+        """
+        DIP: We depend on a db_provider abstraction rather than a global object.
+        """
+        self.db = db_provider
+        self.collection_name = CLASS_COLLECTION
 
+    def _get_col(self):
+        """Helper to get the MongoDB collection."""
+        return self.db.get_collection(self.collection_name)
 
-def _class_to_dict(cls) -> dict:
-    """Convert a MongoDB document to a JSON-serializable dict."""
-    if cls is None:
-        return None
-    cls['id'] = str(cls.pop('_id'))
-    if 'booked_members' not in cls:
-        cls['booked_members'] = []
-    return cls
+    def _class_to_dict(self, cls) -> dict:
+        """Convert a MongoDB document to a JSON-serializable dict."""
+        if cls is None:
+            return None
+        cls['id'] = str(cls.pop('_id'))
+        if 'booked_members' not in cls:
+            cls['booked_members'] = []
+        return cls
 
-
-def add_class(name: str, instructor: str, schedule: str,
-              capacity: int, location: str,
-              description: str = '') -> dict:
-    """
-    Insert a new fitness class into the database.
-
-    Args:
-        name:        Name of the fitness class.
-        instructor:  Name of the instructor.
-        schedule:    Date/time string (e.g. "2026-03-10T10:00").
-        capacity:    Maximum number of participants (must be > 0).
-        location:    Where the class is held.
-        description: Optional description of the class.
-
-    Returns:
-        The newly created class document as a dict (with 'id' field).
-
-    Raises:
-        ValueError: If capacity is not a positive integer.
-    """
-    if not isinstance(capacity, int) or capacity <= 0:
-        raise ValueError('Capacity must be a positive integer.')
-
-    col = DB.get_collection(CLASS_COLLECTION)
-    new_class = {
-        '_id': uuid.uuid4().hex[:8],
-        'name': name.strip(),
-        'instructor': instructor.strip(),
-        'schedule': schedule.strip(),
-        'capacity': capacity,
-        'location': location.strip(),
-        'description': description.strip(),
-        'enrolled': 0,   
-        'booked_members': [],
-    }
-    col.insert_one(new_class)
-    return _class_to_dict(new_class)
-
-
-def get_class_by_id(class_id: str) -> dict:
-    """
-    Retrieve a single fitness class by its ID.
-
-    Returns:
-        The class document as a dict, or None if not found.
-    """
-    col = DB.get_collection(CLASS_COLLECTION)
-    
-    try:
-        query_id = ObjectId(class_id)
-    except InvalidId:
-        query_id = class_id
-
-    cls = col.find_one({'_id': query_id})
-    return _class_to_dict(cls)
-
-def get_all_classes() -> list[dict]:
-    """
-    Retrieve all fitness classes from the database.
-
-    Returns:
-        A list of class dicts.
-    """
-    col = DB.get_collection(CLASS_COLLECTION)
-    classes = col.find()
-    return [_class_to_dict(cls) for cls in classes]
-
-
-def book_class(class_id: str, member_email: str) -> dict:
-    """
-    Book a spot in a fitness class for a member.
-
-    Args:
-        class_id:     The ID of the class to book.
-        member_email: The email of the member booking the class.
-
-    Returns:
-        The updated class document as a dict.
-
-    Raises:
-        ValueError: If class not found, already booked, or class is full.
-    """
-    col = DB.get_collection(CLASS_COLLECTION)
-
-    try:
-        query_id = ObjectId(class_id)
-    except InvalidId:
-        query_id = class_id
-
-    cls = col.find_one({'_id': query_id})
-
-    if cls is None:
-        raise ValueError('Class not found.')
-    
-    schedule_str = cls.get('schedule')
-    if schedule_str:
+    def _format_id(self, class_id):
+        """Helper to handle both ObjectId and custom string IDs."""
         try:
-            schedule_dt = datetime.fromisoformat(schedule_str)
-            if schedule_dt < datetime.now():
-                raise ValueError('Cannot book a class that is in the past.')
-        except ValueError as e:
-            if str(e) == 'Cannot book a class that is in the past.':
-                raise
+            return ObjectId(class_id)
+        except (InvalidId, TypeError):
+            return class_id
 
-    if member_email in cls.get('booked_members', []):
-        raise ValueError('You have already booked this class.')
+    def add_class(self, name: str, instructor: str, schedule: str,
+                  capacity: int, location: str,
+                  description: str = '') -> dict:
+        """Insert a new fitness class into the database."""
+        if not isinstance(capacity, int) or capacity <= 0:
+            raise ValueError('Capacity must be a positive integer.')
 
-    if cls.get('enrolled', 0) >= cls.get('capacity', 0):
-        raise ValueError('Class is full.')
-
-    col.update_one(
-        {'_id': query_id},
-        {
-            '$push': {'booked_members': member_email},
-            '$inc':  {'enrolled': 1},
+        col = self._get_col()
+        new_class = {
+            '_id': uuid.uuid4().hex[:8],
+            'name': name.strip(),
+            'instructor': instructor.strip(),
+            'schedule': schedule.strip(),
+            'capacity': capacity,
+            'location': location.strip(),
+            'description': description.strip(),
+            'enrolled': 0,   
+            'booked_members': [],
         }
-    )
+        col.insert_one(new_class)
+        return self._class_to_dict(new_class)
 
-    updated = col.find_one({'_id': query_id})
-    return _class_to_dict(updated)
+    def get_class_by_id(self, class_id: str) -> dict:
+        """Retrieve a single fitness class by its ID."""
+        col = self._get_col()
+        query_id = self._format_id(class_id)
+        cls = col.find_one({'_id': query_id})
+        return self._class_to_dict(cls)
 
-def get_booked_members(class_id: str) -> list[str]:
-    """
-    Retrieve the list of member emails who have booked a class.
+    def get_all_classes(self) -> list[dict]:
+        """Retrieve all fitness classes from the database."""
+        col = self._get_col()
+        classes = col.find()
+        return [self._class_to_dict(cls) for cls in classes]
 
-    Args:
-        class_id: The ID of the class.
+    def book_class(self, class_id: str, member_email: str) -> dict:
+        """Book a spot in a fitness class for a member."""
+        col = self._get_col()
+        query_id = self._format_id(class_id)
 
-    Returns:
-        A list of member email strings.
+        cls = col.find_one({'_id': query_id})
 
-    Raises:
-        ValueError: If the class does not exist.
-    """
-    col = DB.get_collection(CLASS_COLLECTION)
-    try:
-        query_id = ObjectId(class_id)
-    except InvalidId:
-        query_id = class_id
+        if cls is None:
+            raise ValueError('Class not found.')
+        
+        # Date validation logic
+        schedule_str = cls.get('schedule')
+        if schedule_str:
+            try:
+                schedule_dt = datetime.fromisoformat(schedule_str)
+                if schedule_dt < datetime.now():
+                    raise ValueError('Cannot book a class that is in the past.')
+            except ValueError as e:
+                if str(e) == 'Cannot book a class that is in the past.':
+                    raise
 
-    cls = col.find_one({'_id': query_id})
+        if member_email in cls.get('booked_members', []):
+            raise ValueError('You have already booked this class.')
 
-    if cls is None:
-        raise ValueError('Class not found.')
+        if cls.get('enrolled', 0) >= cls.get('capacity', 0):
+            raise ValueError('Class is full.')
 
-    return cls.get('booked_members', [])
+        # Atomic Update to prevent overbooking
+        col.update_one(
+            {'_id': query_id},
+            {
+                '$push': {'booked_members': member_email},
+                '$inc':  {'enrolled': 1},
+            }
+        )
+
+        updated = col.find_one({'_id': query_id})
+        return self._class_to_dict(updated)
+
+    def get_booked_members(self, class_id: str) -> list[str]:
+        """Retrieve the list of member emails who have booked a class."""
+        col = self._get_col()
+        query_id = self._format_id(class_id)
+
+        cls = col.find_one({'_id': query_id})
+
+        if cls is None:
+            raise ValueError('Class not found.')
+
+        return cls.get('booked_members', [])

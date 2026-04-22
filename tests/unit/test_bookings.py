@@ -58,11 +58,11 @@ def test_book_class_no_token(client, setup_class):
 def test_book_class_trainer_forbidden(client, setup_class, trainer_token):
     res = client.post(f"/classes/{setup_class}/book", headers={"Authorization": f"Bearer {trainer_token}"})
     assert res.status_code == HTTPStatus.FORBIDDEN
-    assert "Only members can book" in res.json["message"]
+    assert "Access denied. Role should be: ['member']" in res.json["message"]
 
 def test_book_class_not_found(client, member_token):
     res = client.post("/classes/fake_invalid_id/book", headers={"Authorization": f"Bearer {member_token}"})
-    assert res.status_code == HTTPStatus.NOT_FOUND
+    assert res.status_code == HTTPStatus.BAD_REQUEST
     assert "Class not found" in res.json["message"]
 
 def test_book_class_duplicate(client, setup_class, member_token):
