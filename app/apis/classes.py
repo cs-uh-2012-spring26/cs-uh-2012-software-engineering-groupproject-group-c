@@ -1,16 +1,13 @@
-"""
-REST API endpoints for fitness class management.
-"""
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, get_jwt
-from datetime import datetime
-
-import app.db.classes as cls_db
-from app.services.email_service import send_email
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+import app.services.class_service as class_service
+from app.models.roles import UserRole
+from app.utils.auth_decorators import require_roles
 
 api = Namespace('classes', description='Fitness class operations')
 
+# Define the model fields explicitly to fix the TypeError
 class_input_model = api.model('ClassInput', {
     'name': fields.String(required=True, example='Morning Yoga'),
     'instructor': fields.String(required=True, example='Jane Doe'),
@@ -20,205 +17,63 @@ class_input_model = api.model('ClassInput', {
     'description': fields.String(required=False, example='A relaxing flow for all levels.'),
 })
 
-# --------------------------------------------------------------------------- #
-# Endpoints
-# --------------------------------------------------------------------------- #
 @api.route('/')
 class ClassList(Resource):
-
-    @jwt_required()
-    @api.expect(class_input_model)
-    @api.response(201, 'Class created successfully')
-    @api.response(400, 'Invalid input')
-    @api.response(401, 'Unauthorized')
-    def post(self):
-        """
-        Create a new fitness class.
-
-        Requires a valid Bearer token in the Authorization header.
-        All fields except `description` are mandatory.
-        """
-
-        claims = get_jwt()
-
-        # Trainer or admin only
-        if claims['role'] not in ('trainer', 'admin'):
-            api.abort(401, 'Unauthorized')
-        
-        data = request.json
-
-        # --- Field presence check (belt-and-suspenders on top of validate=True)
-        required = ['name', 'instructor', 'schedule', 'capacity', 'location']
-        missing = [f for f in required if not data.get(f)]
-        if missing:
-            api.abort(400, f'Missing required fields: {", ".join(missing)}')
-
-        # --- Type / value validation
-        capacity = data.get('capacity')
-        if not isinstance(capacity, int) or capacity <= 0:
-            api.abort(400, 'capacity must be a positive integer.')
-
-        name = data['name'].strip()
-        if not name:
-            api.abort(400, 'name must not be blank.')
-
-        try:
-            new_class = cls_db.add_class(
-                name=name,
-                instructor=data['instructor'],
-                schedule=data['schedule'],
-                capacity=capacity,
-                location=data['location'],
-                description=data.get('description', ''),
-            )
-        except ValueError as e:
-            api.abort(400, str(e))
-
-        return new_class, 201
-    
     @api.response(200, 'Success')
     def get(self):
-        """
-        Retrieve a list of all fitness classes.
-        """
-        classes = cls_db.get_all_classes()
+        """Retrieve all classes (Public View)."""
+        return {'classes': class_service.get_public_classes()}, 200
 
-        for c in classes:
-            c.pop("booked_members", None)  
-
-        return {'classes': classes}, 200
-
+    @jwt_required()
+    @require_roles(UserRole.ADMIN, UserRole.TRAINER)
+    @api.expect(class_input_model)
+    def post(self):
+        """Create a new fitness class."""
+        try:
+            new_class = class_service.create_class(request.json)
+            return new_class, 201
+        except ValueError as e:
+            api.abort(400, str(e))
 
 @api.route('/<string:class_id>/book')
 class BookClass(Resource):
-
     @jwt_required()
-    @api.response(200, 'Booking successful')
-    @api.response(400, 'Already booked or class is full')
-    @api.response(403, 'Forbidden - member role required')
-    @api.response(404, 'Class not found')
+    @require_roles(UserRole.MEMBER)
     def post(self, class_id):
-        """
-        Book a spot in a fitness class. Member only.
-        """
-        claims = get_jwt()
-
-        if claims['role'] != 'member':
-            api.abort(403, 'Only members can book a class.')
-
-        member_email = claims['sub'] 
-        cls = cls_db.get_class_by_id(class_id)
-        if cls is None:
-            api.abort(404, 'Class not found.')
-
+        """Book a spot (Members Only)."""
+        member_email = get_jwt_identity()
         try:
-            updated_class = cls_db.book_class(class_id, member_email)
+            updated = class_service.book_class_for_member(class_id, member_email)
+            return {
+                'message': 'Booking successful.',
+                'enrolled': updated['enrolled'],
+                'capacity': updated['capacity']
+            }, 200
+        except FileNotFoundError as e:
+            api.abort(404, str(e))
         except ValueError as e:
             api.abort(400, str(e))
 
-        return {
-            'message': 'Booking successful.',
-            'class_id': class_id,
-            'enrolled': updated_class['enrolled'],
-            'capacity': updated_class['capacity'],
-        }, 200
-
-
 @api.route('/<string:class_id>/members')
 class ClassMembers(Resource):
-
     @jwt_required()
-    @api.response(200, 'Success')
-    @api.response(403, 'Forbidden – trainer or admin role required')
-    @api.response(404, 'Class not found')
+    @require_roles(UserRole.ADMIN, UserRole.TRAINER)
     def get(self, class_id):
-        """
-        View the list of members who booked a class. Trainer or admin only.
-        """
-        claims = get_jwt()
-        if claims['role'] not in ('trainer', 'admin'):
-            api.abort(403, 'Trainer or admin role required.')
-
+        """View member list."""
         try:
-            members = cls_db.get_booked_members(class_id)
+            members = class_service.get_class_members(class_id)
+            return {'class_id': class_id, 'booked_members': members}, 200
         except ValueError as e:
-            api.abort(404, str(e))
-
-        return {
-            'class_id': class_id,
-            'total_booked': len(members),
-            'booked_members': members,
-        }, 200
+            return {"message": str(e)}, 404
 
 @api.route('/<string:class_id>/send-reminder')
 class SendReminders(Resource):
-
     @jwt_required()
-    @api.response(200,  'Reminder emails sent')
-    @api.response(403,  'Forbidden – trainer or admin role required')
-    @api.response(404,  'Class not found')
+    @require_roles(UserRole.ADMIN, UserRole.TRAINER)
     def post(self, class_id):
-        """
-        Send reminder emails to all members booked in a class.
-
-        Trainer or admin only. Emails are sent immediately on request —
-        no scheduling required. Each email includes the full class details:
-        name, instructor, date/time, location, and description.
-        """
-        claims = get_jwt()
-        if claims['role'] not in ('trainer', 'admin'):
-            api.abort(403, 'Trainer or admin role required.')
-
-        # Fetch class details
-        cls = cls_db.get_class_by_id(class_id)
-        if cls is None:
-            api.abort(404, 'Class not found.')
-
-
-        schedule_str = cls.get('schedule')
-        if schedule_str:
-            try:
-                schedule_dt = datetime.fromisoformat(schedule_str)
-                if schedule_dt < datetime.now():
-                    api.abort(400, 'Cannot send reminders for a class that has already ended.')
-            except ValueError:
-                api.abort(400, 'Invalid class schedule format.')
-
-        booked_members = cls.get('booked_members', [])
-        if not booked_members:
-            return {
-                'message':     'No members booked for this class.',
-                'sent':        [],
-                'failed':      [],
-            }, 200
-
-        sent   = []
-        failed = []
-
-        for member_email in booked_members:
-            subject = f"Reminder: {cls['name']} on {cls['schedule']}"
-            body = (
-                f"Hello,\n\n"
-                f"This is a reminder for the fitness class you booked:\n\n"
-                f"  Class Name : {cls['name']}\n"
-                f"  Instructor : {cls['instructor']}\n"
-                f"  Date/Time  : {cls['schedule']}\n"
-                f"  Location   : {cls['location']}\n"
-                f"  Description: {cls.get('description') or 'N/A'}\n"
-                f"  Spots Filled: {cls['enrolled']} / {cls['capacity']}\n\n"
-                f"See you there!\n"
-            )
-
-            try:
-                send_email(member_email, subject, body)
-                sent.append(member_email)
-            except Exception as exc:
-                # Log failure but continue sending to remaining members
-                print(f"[remind] Failed to send to {member_email}: {exc}")
-                failed.append({'email': member_email, 'reason': str(exc)})
-
-        return {
-            'message': f'Reminders sent: {len(sent)} succeeded, {len(failed)} failed.',
-            'sent':    sent,
-            'failed':  failed,
-        }, 200
+        """Send emails to all members."""
+        try:
+            results = class_service.send_class_reminders(class_id)
+            return {'message': 'Reminders processed', 'results': results}, 200
+        except ValueError as e:
+            api.abort(400, str(e))

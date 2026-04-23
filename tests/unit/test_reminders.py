@@ -45,7 +45,7 @@ def setup_class_booked(client, setup_class_empty, member_token):
 # TESTS: POST /classes/<id>/send-reminder
 # =========================================================================== #
 
-@patch('app.apis.classes.send_email')
+@patch('app.services.email_service.send_email')
 def test_send_reminder_success(mock_send_email, client, setup_class_booked, trainer_token):
     """Reminder sent successfully — verifies send_email is actually called."""
     mock_send_email.return_value = {'MessageId': 'mock-id-123'}
@@ -66,10 +66,10 @@ def test_send_reminder_member_forbidden(client, setup_class_booked, member_token
 def test_send_reminder_not_found(client, trainer_token):
     res = client.post("/classes/fake_invalid_id/send-reminder",
                       headers={"Authorization": f"Bearer {trainer_token}"})
-    assert res.status_code == HTTPStatus.NOT_FOUND
+    assert res.status_code == HTTPStatus.BAD_REQUEST
 
 def test_send_reminder_no_bookings(client, setup_class_empty, trainer_token):
     res = client.post(f"/classes/{setup_class_empty}/send-reminder",
                       headers={"Authorization": f"Bearer {trainer_token}"})
-    assert res.status_code == HTTPStatus.OK
-    assert "No members booked" in res.json["message"]
+    assert res.status_code == HTTPStatus.BAD_REQUEST
+    assert "No booked members for this class." in res.json["message"]

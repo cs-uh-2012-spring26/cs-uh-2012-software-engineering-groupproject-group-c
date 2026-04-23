@@ -59,3 +59,44 @@ def send_email(to_address: str, subject: str, body: str) -> dict:
         },
     )
     return response
+
+def get_class_reminder_template(class_data: dict) -> tuple:
+    """
+    Constructs the subject and body for a class reminder.
+    Separating this allows marketing/copy changes without touching the loop or API.
+    """
+    name = class_data['name']
+    schedule = class_data['schedule']
+    
+    subject = f"Reminder: {name} on {schedule}"
+    body = (
+        f"Hello,\n\n"
+        f"This is a reminder for the fitness class you booked:\n\n"
+        f"  Class Name : {name}\n"
+        f"  Instructor : {class_data['instructor']}\n"
+        f"  Date/Time  : {schedule}\n"
+        f"  Location   : {class_data['location']}\n"
+        f"  Description: {class_data.get('description') or 'N/A'}\n"
+        f"  Spots Filled: {class_data['enrolled']} / {class_data['capacity']}\n\n"
+        f"See you there!\n"
+    )
+    return subject, body
+
+def send_batch_reminders(class_data: dict):
+    """Purely handles the loop and email transport."""
+    booked_members = class_data.get('booked_members', [])
+    sent, failed = [], []
+
+    if not booked_members:
+        return sent, failed
+
+    subject, body = get_class_reminder_template(class_data)
+
+    for member_email in booked_members:
+        try:
+            send_email(member_email, subject, body)
+            sent.append(member_email)
+        except Exception as exc:
+            failed.append({'email': member_email, 'reason': str(exc)})
+            
+    return sent, failed
