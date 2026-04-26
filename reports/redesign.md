@@ -4,6 +4,97 @@
 
 ## Feature 7 + Design Pattern 
 
+### Design Pattern: Strategy Pattern
+
+**Why the Strategy Pattern was chosen:**
+Feature 7 requires users to choose how they receive notifications (email, Telegram, or both). The core challenge is extensibility — the system must support adding new channels (SMS, WhatsApp, Slack) in the future with minimal changes to existing code. The Strategy Pattern was the natural fit because it defines a family of interchangeable algorithms (notification channels) behind a common interface, allowing the system to select and combine them at runtime based on user preferences.
+
+**Implementation:**
+
+The Strategy Pattern was implemented across four new files:
+
+1. `app/services/notification_channel.py` — Abstract base class defining the interface:
+```python
+class NotificationChannel(ABC):
+    @abstractmethod
+    def send(self, to: str, subject: str, body: str) -> dict:
+        pass
+
+    @property
+    @abstractmethod
+    def channel_name(self) -> str:
+        pass
+```
+
+2. `app/services/email_channel.py` — Concrete strategy wrapping existing AWS SES email:
+```python
+class EmailChannel(NotificationChannel):
+    @property
+    def channel_name(self) -> str:
+        return 'email'
+
+    def send(self, to, subject, body):
+        return send_email(to, subject, body)
+```
+
+3. `app/services/telegram_channel.py` — Concrete strategy using Telegram Bot API:
+```python
+class TelegramChannel(NotificationChannel):
+    @property
+    def channel_name(self) -> str:
+        return 'telegram'
+
+    def send(self, to, subject, body):
+        # sends via Telegram Bot API using chat_id as recipient
+```
+
+4. `app/services/notification_service.py` — Orchestrator that dispatches to correct channels:
+```python
+class NotificationService:
+    def __init__(self, channels: List[NotificationChannel]):
+        self.channels = {channel.channel_name: channel for channel in channels}
+
+    def notify(self, to, subject, body, preferences, telegram_chat_id=None):
+        # dispatches only to channels matching user preferences
+```
+
+**How user preferences work:**
+- At registration, users can optionally specify `notification_preferences` (e.g. `['email']`, `['email', 'telegram']`) and a `telegram_chat_id`
+- Preferences are stored per user in the MongoDB users collection
+- After registration, users can update preferences via `PATCH /Authentication/preferences`
+- When a trainer sends reminders, `send_class_reminders()` looks up each member's preferences and passes them to `NotificationService`, which dispatches only to their chosen channels
+
+**Extensibility:**
+Adding a new notification channel (e.g. SMS) requires only:
+1. Creating a new class `SMSChannel(NotificationChannel)` implementing `send()` and `channel_name`
+2. Registering it in `class_service.py`: `NotificationService([EmailChannel(), TelegramChannel(), SMSChannel()])`
+3. Adding `'sms'` to `ALLOWED_CHANNELS` in `user_service.py`
+
+No existing code needs to be modified — this is the open/closed principle in action alongside the Strategy Pattern.
+
+**How `class_service.py` was refactored:**
+
+The original hardcoded email dispatch:
+```python
+sent, failed = email_service.send_batch_reminders(cls)
+```
+
+Was replaced with per-member preference-aware dispatch:
+```python
+for member_email in members:
+    prefs = users_db.get_user_preferences(member_email)
+    preferences = prefs.get('notification_preferences', ['email'])
+    telegram_chat_id = prefs.get('telegram_chat_id')
+
+    results = notification_service.notify(
+        to=member_email,
+        subject=subject,
+        body=body,
+        preferences=preferences,
+        telegram_chat_id=telegram_chat_id
+    )
+```
+
 
 ## Refactoring for Design Principles
 
