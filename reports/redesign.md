@@ -70,10 +70,10 @@ The API endpoints were then refactored to depend only on these service functions
       - Task 1: Fixed design principle violations
       - Task 4: CI pipeline setup (GitHub Actions + Secrets, no hardcoded env vars)
       - Task 5: Updated class diagram + documentation
-2. **Shahzaib:**
+2. **Muhammad Shahzaib:**
       - Task 1: Fixed code smells from Sprint 3A
       - Task 2: Implemented Feature 6 (Create Recurring Classes)
-3. **Umair:**
+3. **Umair Hafeez:**
       - Task 1: Identified and applied design patterns
       - Task 2: Implemented Feature 7 (Notifications system: Email + Telegram)
 4. **Everyone:**
