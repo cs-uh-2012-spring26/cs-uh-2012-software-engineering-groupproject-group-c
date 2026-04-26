@@ -1,9 +1,8 @@
 """
 Database operations for fitness classes following the Repository Pattern (DIP).
 """
-from bson import ObjectId
-from bson.errors import InvalidId
 from app.db.constants import CLASS_COLLECTION
+import uuid
 
 class ClassRepository:
     def __init__(self, db_provider):
@@ -18,18 +17,18 @@ class ClassRepository:
         return self.db.get_collection(self.collection_name)
 
     def _class_to_dict(self, cls) -> dict:
-        """Convert a MongoDB document to a JSON-serializable dict."""
         if cls is None:
             return None
-        cls['id'] = str(cls.pop('_id'))
+        cls = dict(cls)
+        cls['id'] = cls['_id']
+        del cls['_id']
         return cls
-
+    
     def _format_id(self, class_id):
-        """Helper to handle both ObjectId and custom string IDs."""
-        try:
-            return ObjectId(class_id)
-        except (InvalidId, TypeError):
+        """Validate and normalize custom string class IDs."""
+        if not class_id or not isinstance(class_id, str):
             raise ValueError("Invalid Class ID format.")
+        return class_id.strip()
 
     def add_class(self, name: str, instructor: str, schedule: str,
                   capacity: int, location: str,
@@ -38,6 +37,7 @@ class ClassRepository:
 
         col = self._get_col()
         new_class = {
+            '_id': str(uuid.uuid4())[:8],
             'name': name.strip(),
             'instructor': instructor.strip(),
             'schedule': schedule.strip(),
