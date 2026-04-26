@@ -404,8 +404,9 @@ class TestUpdateRecurrence:
     def test_update_recurrence_class_not_found(
         self, client, trainer_token,
     ):
+        # Use a valid ObjectId format (24 hex chars) that doesn't exist
         res = client.patch(
-            "/classes/nonexistent_id_123/recurrence",
+            "/classes/000000000000000000000000/recurrence",
             json={"frequency": "daily", "total_occurrences": 5},
             headers=_headers(trainer_token),
         )
