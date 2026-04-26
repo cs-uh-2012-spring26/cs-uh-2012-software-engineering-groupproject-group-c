@@ -1,7 +1,5 @@
 ## Redesign Report
 
-## Feature 6
-
 ## Feature 7 + Design Pattern 
 
 ### Design Pattern: Strategy Pattern
@@ -152,6 +150,23 @@ The API endpoints were then refactored to depend only on these service functions
 
 
 ## Refactoring for code smells
+
+
+
+## Class Diagram:
+
+![Use Case Diagram](class_diagram_s3b.png)
+
+
+The refactored system upgrades the Sprint 3A design from a simple 2-layer structure (API → Repository) to a more scalable 3-layer architecture (API → Service → Repository), improving separation of concerns and aligning with SOLID principles. Business logic is now handled in dedicated service classes instead of being embedded in API routes, making the system easier to maintain and test. The class diagram was updated to reflect these structural changes and the introduction of new domain concepts.
+
+- Introduced a Service Layer to handle all business logic separately from API and Repository layers
+- Replaced direct API-to-repository calls with an API → Service → Repository flow
+- Added a dedicated Booking entity instead of storing booked users as simple email lists
+- Introduced a User inheritance hierarchy (Member, Trainer, Admin) instead of a single role attribute
+- Added a Recurrence system for supporting repeating classes (daily/weekly schedules)
+- Implemented a Notification Strategy Pattern supporting multiple channels (Email, Telegram)
+- Improved UML by correctly distinguishing associations vs dependencies for clearer domain modeling
 
 
 
