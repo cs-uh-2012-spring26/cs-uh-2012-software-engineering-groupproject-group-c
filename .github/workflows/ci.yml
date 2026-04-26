@@ -10,6 +10,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      MOCK_DB: ${{ secrets.MOCK_DB }}
+      DEBUG: ${{ secrets.DEBUG }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,11 +33,5 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run Pytest and Coverage
-        env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          MOCK_DB: ${{ secrets.MOCK_DB }}
-          DEBUG: ${{ secrets.DEBUG }}
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
           pytest -vv --cov-config=.coveragerc --cov=app tests/ --cov-report=term-missing
