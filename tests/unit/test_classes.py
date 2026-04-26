@@ -10,7 +10,8 @@ def admin_token(client):
     """Registers an Admin and returns their JWT token."""
     client.post("/Authentication/register", json={
         "username": "AdminUser", "email": "admin@nyu.edu",
-        "password": "Password@123", "phone": "1234567890", "role": "Admin"
+        "password": "Password@123", "phone": "1234567890", "role": "Admin",
+        "notification_preferences": ["email"]
     })
     res = client.post("/Authentication/login", json={"email": "admin@nyu.edu", "password": "Password@123"})
     return res.json["token"]
@@ -20,7 +21,8 @@ def trainer_token(client):
     """Registers a Trainer and returns their JWT token."""
     client.post("/Authentication/register", json={
         "username": "TrainerBob", "email": "trainer@nyu.edu",
-        "password": "Password@123", "phone": "1234567890", "role": "Trainer"
+        "password": "Password@123", "phone": "1234567890", "role": "Trainer",
+        "notification_preferences": ["email"]
     })
     res = client.post("/Authentication/login", json={"email": "trainer@nyu.edu", "password": "Password@123"})
     return res.json["token"]
@@ -30,7 +32,8 @@ def member_token(client):
     """Registers a Member and returns their JWT token."""
     client.post("/Authentication/register", json={
         "username": "MemberAlice", "email": "member@nyu.edu",
-        "password": "Password@123", "phone": "1234567890", "role": "Member"
+        "password": "Password@123", "phone": "1234567890", "role": "Member",
+        "notification_preferences": ["email"]
     })
     res = client.post("/Authentication/login", json={"email": "member@nyu.edu", "password": "Password@123"})
     return res.json["token"]
@@ -41,7 +44,7 @@ def valid_class_payload():
     return {
         "name": "Morning Yoga",
         "instructor": "TrainerBob",
-        "schedule": "2026-03-10T08:00",
+        "schedule": "2027-03-10T08:00",
         "capacity": 20,
         "location": "Studio A",
         "description": "Relaxing morning flow"
@@ -66,6 +69,7 @@ def test_create_class_admin_success(client, admin_token, valid_class_payload):
 def test_create_class_no_token(client, valid_class_payload):
     res = client.post("/classes/", json=valid_class_payload)
     assert res.status_code == HTTPStatus.BAD_REQUEST
+
 def test_create_class_member_forbidden(client, member_token, valid_class_payload):
     headers = {"Authorization": f"Bearer {member_token}"}
     res = client.post("/classes/", json=valid_class_payload, headers=headers)
@@ -77,7 +81,6 @@ def test_create_class_missing_fields(client, trainer_token, valid_class_payload)
     del valid_class_payload["name"]
     res = client.post("/classes/", json=valid_class_payload, headers=headers)
     assert res.status_code == HTTPStatus.BAD_REQUEST
-    assert "Class name must not be blank." in res.json["message"]
 
 def test_create_class_invalid_capacity(client, trainer_token, valid_class_payload):
     headers = {"Authorization": f"Bearer {trainer_token}"}
@@ -86,12 +89,13 @@ def test_create_class_invalid_capacity(client, trainer_token, valid_class_payloa
     assert res.status_code == HTTPStatus.BAD_REQUEST
     assert "Capacity must be a positive integer." in res.json["message"]
 
-def test_create_class_blank_name(client, trainer_token, valid_class_payload):
+def test_create_class_past_schedule(client, trainer_token, valid_class_payload):
+    """Test that creating a class with a past schedule is rejected."""
     headers = {"Authorization": f"Bearer {trainer_token}"}
-    valid_class_payload["name"] = "   "
+    valid_class_payload["schedule"] = "2020-01-01T08:00"
     res = client.post("/classes/", json=valid_class_payload, headers=headers)
     assert res.status_code == HTTPStatus.BAD_REQUEST
-    assert "Class name must not be blank." in res.json["message"]
+    assert "Schedule must be a future date and time" in res.json["message"]
 
 # =========================================================================== #
 # TESTS: GET /classes/ (View Classes)

@@ -1,5 +1,6 @@
 import re
 import app.db.users as users_db
+import bcrypt
 from flask_jwt_extended import create_access_token
 from app.models.roles import UserRole
 
@@ -13,52 +14,61 @@ def is_strong_password(password):
         re.search(r"[0-9]", password)
     )
 
-def register_user(username, email, password, phone, role,
-                  notification_preferences=None, telegram_chat_id=None):
-    """
-    Handles the business logic for creating a new user.
-    """
-    role_val = role.strip().lower()
-    
-    # 1. Domain Validation
-    if not username.strip():
-        raise ValueError("username must not be blank.")
-
+def validate_user_data(password, phone, role, email, notification_preferences=None, telegram_chat_id=None):
     if not is_strong_password(password):
         raise ValueError("password must be at least 8 characters long and include an uppercase letter, lowercase letter, and number.")
 
     if not re.match(r'^\d{10}$', phone):
         raise ValueError("Invalid phone number format. Must be 10 digits.")
 
-    if role_val not in UserRole.values():
+    if role not in UserRole.values():
         raise ValueError(f"Invalid role. Must be one of: {', '.join(UserRole.values())}")
-
-    # 2. Validate notification preferences if provided
+    
+    if users_db.get_user_by_email(email):
+        raise ValueError("Email already registered")
+    
     if notification_preferences is not None:
         invalid = [p for p in notification_preferences if p not in ALLOWED_CHANNELS]
         if invalid:
             raise ValueError(f"Invalid notification channels: {invalid}. Allowed: {ALLOWED_CHANNELS}")
 
-    # 3. Telegram chat_id required if telegram is in preferences
     if notification_preferences and 'telegram' in notification_preferences:
         if not telegram_chat_id:
             raise ValueError("telegram_chat_id is required when telegram is selected as a notification channel.")
+    
 
-    # 4. Check existence
-    if users_db.get_user_by_email(email):
-        raise ValueError("Email already registered")
-
-    # 5. Database Interaction
-    new_user = users_db.add_user(
-        username=username.strip(),
-        email=email.strip(),
-        password=password.strip(),
-        role=role.strip(),
-        phone=phone.strip(),
-        notification_preferences=notification_preferences,
-        telegram_chat_id=telegram_chat_id
+def verify_password(stored_hash: str, provided_password: str) -> bool:
+    """Verify a provided password against a stored bcrypt hash."""
+    return bcrypt.checkpw(
+        provided_password.encode('utf-8'), 
+        stored_hash.encode('utf-8')
     )
-    return new_user
+
+
+def register_user(username, email, password, phone, role,
+                  notification_preferences=None, telegram_chat_id=None):
+    """
+    Handles the business logic for creating a new user.
+    """
+    
+    new_user = {
+        'username': username.strip(),
+        'email': email.strip(),
+        'password': password.strip(),
+        'phone': phone.strip(),
+        'role': role.strip().lower(),
+        'notification_preferences': notification_preferences or [],
+        'telegram_chat_id': telegram_chat_id.strip() if telegram_chat_id else None
+    }
+    
+    validate_user_data(new_user['password'], new_user['phone'], new_user['role'], new_user['email'], new_user['notification_preferences'], new_user['telegram_chat_id'])    
+
+    salt = bcrypt.gensalt()
+    hashed_password_bytes = bcrypt.hashpw(new_user['password'].encode('utf-8'), salt)
+    new_user['password'] = hashed_password_bytes.decode('utf-8')         
+    updated_new_user = users_db.add_user(new_user)
+
+    return updated_new_user
 
 
 def authenticate_user(email, password):
@@ -67,7 +77,7 @@ def authenticate_user(email, password):
     """
     user = users_db.get_user_for_login(email)
 
-    if user is None or not users_db.verify_password(user['password'], password):
+    if user is None or not verify_password(user['password'], password):
         return None
 
     token = create_access_token(
