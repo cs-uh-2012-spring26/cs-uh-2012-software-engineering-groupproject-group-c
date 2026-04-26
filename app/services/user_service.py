@@ -57,7 +57,7 @@ def register_user(username, email, password, phone, role,
         'password': password.strip(),
         'phone': phone.strip(),
         'role': role.strip().lower(),
-        'notification_preferences': notification_preferences or [],
+        'notification_preferences': notification_preferences or ['email'],
         'telegram_chat_id': telegram_chat_id.strip() if telegram_chat_id else None
     }
     

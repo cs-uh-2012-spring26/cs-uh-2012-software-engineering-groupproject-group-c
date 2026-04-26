@@ -87,7 +87,10 @@ def get_class_members(class_id: str):
     Retrieves the list of members for a specific class.
     """
     members = class_repo.get_booked_members(class_id)
-
+    if members is None:
+        raise ValueError("Class not found.")
+    if len(members) == 0:
+        raise ValueError("No members booked for this class.")
     return members
 
 

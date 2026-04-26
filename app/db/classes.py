@@ -29,7 +29,7 @@ class ClassRepository:
         try:
             return ObjectId(class_id)
         except (InvalidId, TypeError):
-            return ValueError("Invalid Class ID format.")
+            raise ValueError("Invalid Class ID format.")
 
     def add_class(self, name: str, instructor: str, schedule: str,
                   capacity: int, location: str,
