@@ -44,8 +44,7 @@ def setup_class_booked(client, setup_class_empty, member_token):
 # =========================================================================== #
 # TESTS: POST /classes/<id>/send-reminder
 # =========================================================================== #
-
-@patch('app.services.email_service.send_email')
+@patch('app.services.email_channel.send_email')
 def test_send_reminder_success(mock_send_email, client, setup_class_booked, trainer_token):
     """Reminder sent successfully — verifies send_email is actually called."""
     mock_send_email.return_value = {'MessageId': 'mock-id-123'}

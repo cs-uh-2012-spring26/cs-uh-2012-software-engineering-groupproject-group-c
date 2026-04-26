@@ -17,3 +17,7 @@ AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 AWS_REGION=eu-north-1        
 SES_SENDER_EMAIL=your_verified@email.com
+
+
+# Telegram Bot Setup
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
