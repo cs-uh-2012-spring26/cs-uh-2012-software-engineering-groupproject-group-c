@@ -2,7 +2,7 @@
 
 ## Feature 6
 
-## Feature 7
+## Feature 7 + Design Pattern 
 
 
 ## Refactoring for Design Principles
@@ -61,4 +61,21 @@ The API endpoints were then refactored to depend only on these service functions
 
 
 ## Refactoring for code smells
+
+
+
+## Task Distribution Summary
+- **Sadaf Habib:**
+      Task 1: Fixed design principle violations
+      Task 4: CI pipeline setup (GitHub Actions + Secrets, no hardcoded env vars)
+      Task 5: Updated class diagram + documentation
+- **Shahzaib:**
+      Task 1: Fixed code smells from Sprint 3A
+      Task 2: Implemented Feature 6 (Create Recurring Classes)
+- **Umair:**
+      Task 1: Identified and applied design patterns
+      Task 2: Implemented Feature 7 (Notifications system: Email + Telegram)
+- **Everyone:**
+      Task 3: Updated and added tests after refactoring. Ensured all tests pass and maintain ≥90% coverage
+
 
