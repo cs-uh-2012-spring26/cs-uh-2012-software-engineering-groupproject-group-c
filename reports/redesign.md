@@ -151,6 +151,32 @@ The API endpoints were then refactored to depend only on these service functions
 
 ## Refactoring for code smells
 
+## Refactoring for Code Smells
+
+**1. Duplicated Code**
+* **File:** `app/db/classes.py` | **Methods:** `get_class_by_id()`, `book_class()`, `get_booked_members()`
+* **Problem:** An identical `try/except` block for parsing MongoDB `ObjectID`s from strings was repeated across multiple repository methods. If the ID handling logic ever needed to change, it would have to be manually tracked down and updated in every method, increasing the risk of inconsistency.
+* **The Fix:** Extracted this parsing logic into a single private helper function `_format_id(self, class_id: str) -> ObjectId` within the `ClassRepository`. All database methods now call this centralized helper, which safely casts the string and explicitly raises a `ValueError` if the format is invalid, ensuring DRY (Don't Repeat Yourself) compliance and robust error handling.
+
+**2. Long Method & Controller Bloat**
+* **File:** `app/apis/classes.py` | **Method:** `SendReminders.post()`
+* **Problem:** This single method originally spanned roughly 45 lines, simultaneously handling HTTP authorization, database fetching, past-class validation, email subject/body construction, a send loop with per-recipient error handling, and result aggregation. A method should do one thing and be readable at a glance.
+* **The Fix:** The method was heavily refactored by moving all business and orchestration logic into the Service Layer. The controller now simply calls `class_service.send_class_reminders(class_id)`. Inside the service, the actual formatting and dispatching loop was further delegated to the new Strategy Pattern-based `NotificationService`, reducing the API controller method to just a few lines focused purely on HTTP responses.
+
+**3. Comments Smell & Manual Validation**
+* **Files:** `app/apis/classes.py` & `app/apis/auth.py`
+* **Problem:** API routes contained heavy manual validation logic (checking missing fields, verifying data structures) accompanied by section-marker comments just to explain the cluttered code. According to clean code principles, comments compensating for poor structure indicate the need for refactoring.
+* **The Fix:** Manual dictionary validation and the associated comments were entirely removed from the controllers. Instead, framework-level validation was implemented using `flask-restx` by passing `validate=True` to the `@api.expect()` decorators. This allows the framework to automatically reject malformed payloads, keeping the controllers lean and eliminating the need for structural comments.
+
+**4. Primitive Obsession (Unsafe Dictionary Access)**
+* **Files:** `app/services/class_service.py` & `app/services/user_service.py`
+* **Problem:** Service layer functions like `create_class(data: dict)` and `register_user(data: dict)` accepted raw JSON dictionaries from the HTTP request. This obscured the function contracts (developers couldn't tell what fields were required without reading the code) and introduced `AttributeError` risks if a key was missing when `.get().strip()` was called.
+* **The Fix:** Refactored the service signatures to eliminate dictionaries entirely. The service functions now accept explicit keyword arguments (e.g., `create_class(name: str, instructor: str, capacity: int, ...)`). The API controllers now safely unpack the request payload and pass explicit arguments, ensuring high type safety, clear contracts, and decoupling the Service layer from web-layer data structures.
+
+**5. Magic Strings & Dead Code**
+* **Files:** Multiple files across `app/apis/`
+* **Problem:** Unused imports (like `JWTManager` and `create_access_token` in non-auth routes) added noise and cognitive load to the files. Additionally, role strings (`'trainer'`, `'admin'`) appeared as raw string literals across the codebase, creating a risk for silent bugs via typos and making refactoring difficult.
+* **The Fix:** Cleaned up the files by deleting all unused imports. The "Magic Strings" were eliminated by defining all user roles as a Python Enum (`UserRole`) in `app/models/roles.py`. Role checks across the API were replaced with a declarative `@require_roles(UserRole.ADMIN, UserRole.TRAINER)` decorator, ensuring a single, type-safe source of truth.
 
 
 ## Class Diagram:
