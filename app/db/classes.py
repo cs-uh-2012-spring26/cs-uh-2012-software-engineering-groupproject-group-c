@@ -3,8 +3,6 @@ Database operations for fitness classes following the Repository Pattern (DIP).
 """
 from bson import ObjectId
 from bson.errors import InvalidId
-import uuid
-from datetime import datetime
 from app.db.constants import CLASS_COLLECTION
 
 class ClassRepository:
@@ -24,8 +22,6 @@ class ClassRepository:
         if cls is None:
             return None
         cls['id'] = str(cls.pop('_id'))
-        if 'booked_members' not in cls:
-            cls['booked_members'] = []
         return cls
 
     def _format_id(self, class_id):
@@ -33,18 +29,15 @@ class ClassRepository:
         try:
             return ObjectId(class_id)
         except (InvalidId, TypeError):
-            return class_id
+            return ValueError("Invalid Class ID format.")
 
     def add_class(self, name: str, instructor: str, schedule: str,
                   capacity: int, location: str,
                   description: str = '') -> dict:
         """Insert a new fitness class into the database."""
-        if not isinstance(capacity, int) or capacity <= 0:
-            raise ValueError('Capacity must be a positive integer.')
 
         col = self._get_col()
         new_class = {
-            '_id': uuid.uuid4().hex[:8],
             'name': name.strip(),
             'instructor': instructor.strip(),
             'schedule': schedule.strip(),
@@ -80,31 +73,23 @@ class ClassRepository:
         if cls is None:
             raise ValueError('Class not found.')
         
-        # Date validation logic
-        schedule_str = cls.get('schedule')
-        if schedule_str:
-            try:
-                schedule_dt = datetime.fromisoformat(schedule_str)
-                if schedule_dt < datetime.now():
-                    raise ValueError('Cannot book a class that is in the past.')
-            except ValueError as e:
-                if str(e) == 'Cannot book a class that is in the past.':
-                    raise
-
-        if member_email in cls.get('booked_members', []):
-            raise ValueError('You have already booked this class.')
-
-        if cls.get('enrolled', 0) >= cls.get('capacity', 0):
-            raise ValueError('Class is full.')
-
-        # Atomic Update to prevent overbooking
-        col.update_one(
-            {'_id': query_id},
+        update_result = col.update_one(
+            {
+                '_id': query_id,
+                'booked_members': {'$ne': member_email}, 
+                'enrolled': {'$lt': cls['capacity']} 
+            },
             {
                 '$push': {'booked_members': member_email},
                 '$inc':  {'enrolled': 1},
             }
         )
+
+        if update_result.modified_count == 0:
+            if member_email in cls.get('booked_members', []):
+                raise ValueError('You have already booked this class.')
+            else:
+                raise ValueError('Class is full.')
 
         updated = col.find_one({'_id': query_id})
         return self._class_to_dict(updated)

@@ -7,44 +7,37 @@ from app.db import DB
 from app.db.constants import USER_COLLECTION
 
 
-def _user_to_dict(user) -> Optional[dict]:
-    """Convert a MongoDB document to a JSON-serializable dict (no password)."""
+def _get_col():
+        """Helper to get the MongoDB collection."""
+        return DB.get_collection(USER_COLLECTION)
+
+def _fetch_and_format_user(email: str) -> Optional[dict]:
+    """ Internal helper: Retrieves user by email and normalizes the MongoDB _id. """
+    col = _get_col()
+    user = col.find_one({'email': email.strip().lower()})
+    
     if user is None:
         return None
-    user['id'] = str(user['_id'])
-    del user['_id']
-    del user['password']
+        
+    user['id'] = str(user.pop('_id'))
     return user
+
+def get_user_for_login(email: str) -> Optional[dict]:
+    """Retrieve a user by email INCLUDING the password hash."""
+    return _fetch_and_format_user(email)
 
 
 def get_user_by_email(email: str) -> Optional[dict]:
     """Retrieve a user by email. Does NOT include password hash."""
-    col = DB.get_collection(USER_COLLECTION)
-    user = col.find_one({'email': email.strip().lower()})
-    return _user_to_dict(user)
+    user = _fetch_and_format_user(email)
+    
+    if user and 'password' in user:
+        del user['password']
+        
+    return user
 
 
-def get_user_for_login(email: str) -> Optional[dict]:
-    """
-    Retrieve a user by email INCLUDING the password hash.
-    """
-    col = DB.get_collection(USER_COLLECTION)
-    user = col.find_one({'email': email.strip().lower()})
-    if user is None:
-        return None
-    user['id'] = str(user['_id'])
-    del user['_id']
-    return user  
-
-
-def verify_password(stored_hash: str, provided_password: str) -> bool:
-    """Verify a provided password against a stored bcrypt hash."""
-    return bcrypt.checkpw(provided_password.encode('utf-8'), stored_hash.encode('utf-8'))
-
-
-def add_user(username: str, email: str, password: str, role: str,
-             phone: str, notification_preferences: list = None,
-             telegram_chat_id: str = None) -> dict:
+def add_user(new_user: dict) -> dict:
     """
     Insert a new user into the database. Password will be hashed using bcrypt.
 
@@ -60,25 +53,16 @@ def add_user(username: str, email: str, password: str, role: str,
     Returns:
         The newly created user document (without the password hash).
     """
-    col = DB.get_collection(USER_COLLECTION)
-
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
-
-    new_user = {
-        'username': username.strip(),
-        'email': email.strip().lower(),
-        'password': hashed_password.decode('utf-8'),
-        'role': role.strip().lower(),
-        'phone': phone.strip(),
-        'notification_preferences': notification_preferences or ['email'],
-        'telegram_chat_id': telegram_chat_id or None,
-    }
+    col = _get_col()
 
     result = col.insert_one(new_user)
-    new_user['_id'] = result.inserted_id
+    new_user['id'] = str(new_user.pop('_id', result.inserted_id))
+    
+    if 'password' in new_user:
+        del new_user['password']
+        
+    return new_user
 
-    return _user_to_dict(new_user)
 
 
 def get_user_preferences(email: str) -> dict:
@@ -88,7 +72,7 @@ def get_user_preferences(email: str) -> dict:
     Returns:
         Dict with notification_preferences and telegram_chat_id.
     """
-    col = DB.get_collection(USER_COLLECTION)
+    col = _get_col()
     user = col.find_one(
         {'email': email.strip().lower()},
         {'notification_preferences': 1, 'telegram_chat_id': 1}
@@ -115,7 +99,7 @@ def update_notification_preferences(email: str, preferences: list,
     Returns:
         Updated user document.
     """
-    col = DB.get_collection(USER_COLLECTION)
+    col = _get_col()
 
     update_fields = {'notification_preferences': preferences}
     if telegram_chat_id is not None:
