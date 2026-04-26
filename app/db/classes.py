@@ -33,7 +33,8 @@ class ClassRepository:
 
     def add_class(self, name: str, instructor: str, schedule: str,
                   capacity: int, location: str,
-                  description: str = '') -> dict:
+                  description: str = '',
+                  recurrence: dict = None) -> dict:
         """Insert a new fitness class into the database."""
 
         col = self._get_col()
@@ -44,9 +45,11 @@ class ClassRepository:
             'capacity': capacity,
             'location': location.strip(),
             'description': description.strip(),
-            'enrolled': 0,   
+            'enrolled': 0,
             'booked_members': [],
         }
+        if recurrence is not None:
+            new_class['recurrence'] = recurrence
         col.insert_one(new_class)
         return self._class_to_dict(new_class)
 
@@ -105,3 +108,33 @@ class ClassRepository:
             raise ValueError('Class not found.')
 
         return cls.get('booked_members', [])
+
+    def update_class_recurrence(self, class_id: str,
+                                recurrence: dict = None) -> dict:
+        """Update or remove the recurrence rule on an existing class.
+
+        Args:
+            class_id:   The class document ID.
+            recurrence: New recurrence dict, or None to remove recurrence.
+
+        Returns:
+            Updated class dict.
+
+        Raises:
+            ValueError: If the class is not found.
+        """
+        col = self._get_col()
+        query_id = self._format_id(class_id)
+
+        if recurrence is not None:
+            update_op = {'$set': {'recurrence': recurrence}}
+        else:
+            update_op = {'$unset': {'recurrence': ''}}
+
+        result = col.update_one({'_id': query_id}, update_op)
+
+        if result.matched_count == 0:
+            raise ValueError('Class not found.')
+
+        updated = col.find_one({'_id': query_id})
+        return self._class_to_dict(updated)

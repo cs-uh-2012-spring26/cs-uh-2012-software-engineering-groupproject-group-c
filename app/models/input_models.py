@@ -50,3 +50,63 @@ class_input = {
     'location': fields.String(required=True, example='Studio A'),
     'description': fields.String(required=False, example='A relaxing flow for all levels.'),
 }
+
+
+# --- Recurrence models ---
+
+recurrence_input = {
+    'frequency': fields.String(
+        required=True,
+        example='weekly',
+        description="Recurrence frequency: 'daily' or 'weekly'"
+    ),
+    'days_of_week': fields.List(
+        fields.String,
+        required=False,
+        example=['monday', 'wednesday'],
+        description="Required for weekly recurrence. Day names (lowercase)."
+    ),
+    'end_date': fields.String(
+        required=False,
+        example='2026-06-01T08:00',
+        description="ISO 8601 end date. Provide this OR total_occurrences."
+    ),
+    'total_occurrences': fields.Integer(
+        required=False,
+        example=10,
+        description="Total number of occurrences. Provide this OR end_date."
+    ),
+}
+
+book_occurrence_input = {
+    'occurrence_date': fields.String(
+        required=False,
+        example='2026-03-12T08:00',
+        description="ISO 8601 datetime of the specific occurrence to book "
+                    "(required for recurring classes)."
+    ),
+}
+
+update_recurrence_input = {
+    'frequency': fields.String(
+        required=True,
+        example='weekly',
+        description="Recurrence frequency: 'daily' or 'weekly'"
+    ),
+    'days_of_week': fields.List(
+        fields.String,
+        required=False,
+        example=['tuesday', 'thursday'],
+        description="Required for weekly recurrence."
+    ),
+    'end_date': fields.String(
+        required=False,
+        example='2026-08-01T08:00',
+        description="ISO 8601 end date. Provide this OR total_occurrences."
+    ),
+    'total_occurrences': fields.Integer(
+        required=False,
+        example=20,
+        description="Total number of occurrences. Provide this OR end_date."
+    ),
+}
