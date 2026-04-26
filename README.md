@@ -45,6 +45,7 @@ AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 AWS_REGION=eu-north-1        # must match the region where you verified identities
 SES_SENDER_EMAIL=your_verified@email.com
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 ```
 
 (3) Create virtual environment:
@@ -135,7 +136,77 @@ POST /classes/<class_id>/remind
 Sandbox mode restricts sending emails to only verified addresses.
 
 
+## Notification Preferences Feature (Feature 7)
 
+This feature allows users to choose how they receive reminders: via email and/or Telegram.
+
+### Email Notifications
+Email notifications use AWS SES. Follow the Email Reminder Feature Setup section above.
+
+### Telegram Notifications
+
+#### Step 1: Create a Telegram Bot
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` and follow the instructions
+3. Copy the bot token provided
+
+#### Step 2: Get Your Chat ID
+1. Start a conversation with your bot on Telegram
+2. Either:
+   - Message `@myidbot` on Telegram and send `/getid`
+   - Or visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` after messaging your bot and find `"chat":{"id":...}`
+
+#### Step 3: Configure Environment Variables
+Add to your `.env` file:
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+```
+
+#### Step 4: Register with Notification Preferences
+When registering, optionally include your preferred notification channels and Telegram chat ID:
+```json
+POST /Authentication/register
+{
+  "username": "Ahmed",
+  "email": "ahmed@gmail.com",
+  "password": "Ahmed@123",
+  "phone": "1234567890",
+  "role": "member",
+  "notification_preferences": ["email", "telegram"],
+  "telegram_chat_id": "your_chat_id"
+}
+```
+If `notification_preferences` is not provided, it defaults to `["email"]`.
+
+#### Step 5: Update Preferences After Registration
+```json
+PATCH /Authentication/preferences
+{
+  "notification_preferences": ["email", "telegram"],
+  "telegram_chat_id": "your_chat_id"
+}
+```
+Requires a valid JWT token. Allowed channels: `email`, `telegram`.
+
+#### Step 6: Receive Notifications
+When a trainer sends reminders via `POST /classes/<class_id>/send-reminder`,
+notifications are dispatched to each member based on their saved preferences.
+Members on `["email"]` receive only emails. Members on `["email", "telegram"]`
+receive both. The system records any failed dispatches without
+interrupting other notifications.
+
+#### Note on Telegram Access
+The server must have access to `api.telegram.org` to send Telegram messages.
+If running in a restricted network, configure a proxy before starting the server.
+
+#### Note on Development Environment
+This feature was developed in a region where Telegram is restricted (Pakistan). 
+As a result, end-to-end Telegram testing was performed using unit tests with mocked 
+API calls rather than live integration tests. The implementation has been verified to 
+correctly construct and send the API request to Telegram's Bot API — the unit tests 
+confirm the correct `chat_id`, message format, and token usage. Full end-to-end 
+testing can be performed in an unrestricted network environment by following the 
+setup steps above.
 
 ---
 
@@ -154,10 +225,11 @@ You can see a visual report by viewing /htmlcov/index.html
 
 ### Authentication
 
-| Method | Endpoint    | Auth | Description                                  |
-| ------ | ----------- | ---- | -------------------------------------------- |
-| POST   | `/register` | None | Register a new user (Admin, Member, Trainer) |
-| POST   | `/login`    | None | Login and receive JWT token                  |
+| Method | Endpoint     | Auth | Description                                  |
+| ------ | ------------ | ---- | -------------------------------------------- |
+| POST   | `/register`  | None | Register a new user (Admin, Member, Trainer) |
+| POST   | `/login`     | None | Login and receive JWT token                  |
+| PATCH  |`/preferences`|Member| Update notification channel preferences      |
 
 **Password policy:** ≥8 characters, at least one uppercase, one lowercase, one digit.
 
@@ -192,14 +264,17 @@ You can see a visual report by viewing /htmlcov/index.html
 
 ### Test Structure
 
-| Test File               | What it covers                              |
-|-------------------------|---------------------------------------------|
-| `test_auth.py`          | Register and login endpoints                |
-| `test_bookings.py`      | Class booking logic                         |
-| `test_classes.py`       | Class creation and member viewing           |
-| `test_reminders.py`     | Email reminder endpoint and email service   |
-| `test_config.py`        | App configuration                           |
-| `test_db_utils.py`      | Database utility functions                  |
+| Test File                       | What it covers                                     |
+|---------------------------------|----------------------------------------------------|
+| `test_auth.py`                  | Register and login endpoints                       |
+| `test_bookings.py`              | Class booking logic                                |
+| `test_classes.py`               | Class creation and member viewing                  |
+| `test_reminders.py`             | Email reminder endpoint and email service          |
+| `test_config.py`                | App configuration                                  |
+| `test_db_utils.py`              | Database utility functions                         |
+| `test_notification_channels.py` | EmailChannel and TelegramChannel unit tests        |
+| `test_notification_service.py`  | NotificationService dispatch logic                 |
+| `test_preferences.py`           | Notification preferences endpoint and registration |
 
 ### Testing Notes
 
@@ -207,7 +282,7 @@ You can see a visual report by viewing /htmlcov/index.html
 - Tests use **mocked email service** - no real emails are sent during testing
 - All AWS SES calls are mocked, so no AWS credentials are needed to run tests
 - Test files are located in `tests/unit/`
-
+- Tests use **mocked Telegram API** - no real Telegram messages are sent during testing
 ---
 
 ## Virtual Environment Management
