@@ -149,7 +149,6 @@ For class-related operations, a class_service.py layer was used to handle orches
 The API endpoints were then refactored to depend only on these service functions instead of directly calling database methods.
 
 
-## Refactoring for code smells
 
 ## Refactoring for Code Smells
 
