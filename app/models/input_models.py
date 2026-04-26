@@ -8,7 +8,7 @@ register_input = {
     'role': fields.String(required=True, example='member'),
     'notification_preferences': fields.List(
         fields.String,
-        required=True,
+        required=False,
         example=['email'],
         description="Notification channels: 'email', 'telegram'"
     ),
