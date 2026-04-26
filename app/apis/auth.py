@@ -1,66 +1,68 @@
-from flask import request
-from flask_restx import Namespace, Resource, fields
-import app.services.user_service as user_service
-
-api = Namespace('Authentication', description='Registrations and logins')
+from typing import List
+from app.services.notification_channel import NotificationChannel
 
 
-# Request models for Swagger UI documentation
-register_model = api.model('RegisterInput', {
-    'username': fields.String(required=True, example='Ahmed'),
-    'email': fields.String(required=True, example='ahmed@gmail.com'),
-    'password': fields.String(required=True, example='Ahmed@123'),
-    'phone': fields.String(required=True, example='1234567890'),
-    'role': fields.String(required=True, example='member')
-})
+class NotificationService:
+    """
+    Orchestrator for the Strategy Pattern.
+    Dispatches notifications only to channels matching
+    the user's preferences. Adding a new channel requires
+    only registering it here — no other code changes needed.
+    """
 
-# Define the model for Login
-login_model = api.model('LoginInput', {
-    'email': fields.String(required=True, example='ahmed@gmail.com'),
-    'password': fields.String(required=True, example='Ahmed@123')
-})
+    def __init__(self, channels: List[NotificationChannel]):
+        self.channels = {channel.channel_name: channel for channel in channels}
 
-@api.route('/register')
-class Register(Resource):
-    @api.expect(register_model)
-    @api.response(201, 'User registered successfully')
-    @api.response(400, 'Invalid input')
-    def post(self):
-        """Register a new user account."""
-        data = request.json
-        
-        # Structural check (Fields must exist)
-        required = ['username', 'email', 'password', 'phone', 'role']
-        if any(not data.get(f) for f in required):
-            api.abort(400, "Missing required fields")
+    def notify(self, to: str, subject: str, body: str,
+               preferences: List[str],
+               telegram_chat_id: str = None) -> dict:
+        """
+        Send notifications to all channels matching user preferences.
 
-        try:
-            # Delegate all validation and DB work to the service
-            new_user = user_service.register_user(
-                username=data['username'],
-                email=data['email'],
-                password=data['password'],
-                phone=data['phone'],
-                role=data['role']
-            )
-            return {'message': 'User registered successfully', 'user_id': new_user['id']}, 201
-        except ValueError as e:
-            api.abort(400, str(e))
+        Args:
+            to:               Recipient email address.
+            subject:          Notification subject/title.
+            body:             Notification body content.
+            preferences:      List of channel names the user selected.
+            telegram_chat_id: Telegram chat_id if telegram is in preferences.
 
-@api.route('/login')
-class Login(Resource):
-    @api.expect(login_model)
-    @api.response(200, 'Login successful')
-    @api.response(401, 'Invalid credentials')
-    def post(self):
-        """Login to receive a JWT token."""
-        data = request.json
-        if not data or not data.get('email') or not data.get('password'):
-            api.abort(400, "Email and password required")
+        Returns:
+            Dict with sent and failed lists.
+        """
+        sent = []
+        failed = []
 
-        auth_result = user_service.authenticate_user(data['email'], data['password'])
-        
-        if not auth_result:
-            api.abort(401, 'Invalid email or password.')
+        for preference in preferences:
+            channel = self.channels.get(preference)
+            if channel is None:
+                failed.append({
+                    'channel': preference,
+                    'to': to,
+                    'reason': f"Unknown channel: {preference}"
+                })
+                continue
 
-        return auth_result, 200
+            # Use correct recipient identifier per channel
+            if preference == 'telegram':
+                if not telegram_chat_id:
+                    failed.append({
+                        'channel': 'telegram',
+                        'to': to,
+                        'reason': 'No telegram_chat_id configured for this user'
+                    })
+                    continue
+                recipient = telegram_chat_id
+            else:
+                recipient = to
+
+            try:
+                channel.send(recipient, subject, body)
+                sent.append({'channel': preference, 'to': recipient})
+            except Exception as exc:
+                failed.append({
+                    'channel': preference,
+                    'to': recipient,
+                    'reason': str(exc)
+                })
+
+        return {'sent': sent, 'failed': failed}
