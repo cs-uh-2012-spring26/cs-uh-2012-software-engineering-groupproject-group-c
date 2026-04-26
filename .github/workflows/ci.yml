@@ -4,11 +4,18 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "**" ]
+    branches: [ "main" ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      MOCK_DB: ${{ secrets.MOCK_DB }}
+      DEBUG: ${{ secrets.DEBUG }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
 
     steps:
       - name: Checkout code
@@ -26,11 +33,5 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run Pytest and Coverage
-        env:
-          MONGO_URI: "mongodb://localhost:27017"
-          DB_NAME: "fitness_test_db"
-          MOCK_DB: "true"
-          DEBUG: "true"
-          JWT_SECRET_KEY: "super-secret-test-key"
         run: |
           pytest -vv --cov-config=.coveragerc --cov=app tests/ --cov-report=term-missing
