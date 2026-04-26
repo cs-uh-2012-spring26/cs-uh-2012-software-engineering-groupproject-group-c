@@ -10,7 +10,8 @@ from unittest.mock import patch
 def trainer_token(client):
     client.post("/Authentication/register", json={
         "username": "TrainerRay", "email": "trainer_remind@nyu.edu",
-        "password": "Password@123", "phone": "1234567890", "role": "Trainer"
+        "password": "Password@123", "phone": "1234567890", "role": "Trainer",
+        "notification_preferences": ["email"]
     })
     res = client.post("/Authentication/login", json={"email": "trainer_remind@nyu.edu", "password": "Password@123"})
     return res.json["token"]
@@ -19,7 +20,8 @@ def trainer_token(client):
 def member_token(client):
     client.post("/Authentication/register", json={
         "username": "MemberSam", "email": "member_remind@nyu.edu",
-        "password": "Password@123", "phone": "1234567890", "role": "Member"
+        "password": "Password@123", "phone": "1234567890", "role": "Member",
+        "notification_preferences": ["email"]
     })
     res = client.post("/Authentication/login", json={"email": "member_remind@nyu.edu", "password": "Password@123"})
     return res.json["token"]

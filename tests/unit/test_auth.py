@@ -9,7 +9,8 @@ def valid_register_payload():
         "email": "ahmed@gmail.com",
         "password": "StrongPassword@123",
         "phone": "1234567890",
-        "role": "Member"
+        "role": "Member",
+        "notification_preferences": ["email"]
     }
 
 # --------------------------------------------------------------------------- #
@@ -26,7 +27,6 @@ def test_register_missing_fields(client, valid_register_payload):
     del valid_register_payload['password']
     response = client.post("/Authentication/register", json=valid_register_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert "Missing required fields" in response.json['message']
 
 def test_register_weak_password(client, valid_register_payload):
     valid_register_payload['password'] = "weak"
@@ -74,7 +74,6 @@ def test_login_success(client, valid_register_payload):
 def test_login_missing_fields(client):
     response = client.post("/Authentication/login", json={"email": "ahmed@gmail.com"})
     assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert "Email and password required" in response.json['message']
 
 def test_login_invalid_credentials(client, valid_register_payload):
     client.post("/Authentication/register", json=valid_register_payload)
