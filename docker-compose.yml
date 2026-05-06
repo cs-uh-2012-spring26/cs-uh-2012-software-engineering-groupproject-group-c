@@ -1,0 +1,72 @@
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: fitness_db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fitness_network
+
+  # Flask API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fitness_api
+    ports:
+      - "8000:8000"
+    environment:
+      # Database configuration
+      MONGO_URI: "mongodb://root:rootpassword@mongodb:27017"
+      DB_NAME: "fitness_db"
+      
+      # Application settings
+      DEBUG: "true"
+      FLASK_APP: "app"
+      
+      # JWT configuration
+      JWT_SECRET_KEY: "your-secret-key-change-in-production"
+      
+      # AWS SES configuration (set empty for testing)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-eu-north-1}
+      SES_SENDER_EMAIL: ${SES_SENDER_EMAIL:-}
+      
+      # Telegram configuration (set empty for testing)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      
+      # Use real database (not mock)
+      MOCK_DB: "false"
+    
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    
+    volumes:
+      - .:/app
+    
+    networks:
+      - fitness_network
+    
+    command: flask run --host=0.0.0.0 --port=8000
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  fitness_network:
+    driver: bridge
