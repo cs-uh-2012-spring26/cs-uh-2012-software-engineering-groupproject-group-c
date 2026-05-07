@@ -312,6 +312,16 @@ docker compose down
 ---
 
 
+
+## Live Deployment
+
+The application is deployed on a DigitalOcean VM and accessible at:
+
+http://209.38.232.149:8000
+
+The live system is automatically redeployed whenever code is pushed to main and CI passes.
+
+
 ## Virtual Environment Management
 
 * Activate: `source .venv/bin/activate`
