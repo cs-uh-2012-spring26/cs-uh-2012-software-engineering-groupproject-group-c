@@ -21,7 +21,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MONGO_URI: ${MONGO_URI}
+      MONGO_URI: mongodb://mongodb:27017
       DB_NAME: ${DB_NAME}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
