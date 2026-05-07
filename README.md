@@ -210,6 +210,131 @@ setup steps above.
 
 ---
 
+## Recurring Classes & Per-Occurrence Bookings (Feature 6)
+
+Classes can optionally be made **recurring** (daily or weekly). Each occurrence of a recurring class has its own independent capacity and member list. Non-recurring classes work the same way — they simply have a single occurrence equal to their schedule date.
+
+### How It Works
+
+Every class (recurring or not) uses an `occurrence_date` to identify a specific session. When you call `GET /classes/`, recurring classes are expanded into one entry per occurrence, each with its own `enrolled` count. Use the `occurrence_date` value from that listing when booking, viewing members, or sending reminders.
+
+### Creating a Recurring Class
+
+```
+POST /classes/
+Auth: Trainer or Admin
+```
+
+Add a `recurrence` object to the standard class payload (remove this object to make class non-recurring and have just a single instance of a class):
+
+```json
+{
+  "name": "Morning Yoga",
+  "instructor": "Jane",
+  "schedule": "2027-06-01T08:00",
+  "capacity": 20,
+  "location": "Studio A",
+  "description": "Daily morning flow",
+  "recurrence": {
+    "frequency": "daily",
+    "total_occurrences": 5
+  }
+}
+```
+
+**Recurrence options:**
+
+| Field               | Required | Description                                                      |
+|---------------------|----------|------------------------------------------------------------------|
+| `frequency`         | Yes      | `"daily"` or `"weekly"`                                          |
+| `days_of_week`      | Weekly   | List of day names, e.g. `["monday", "wednesday"]`                |
+| `end_date`          | One of   | ISO 8601 end date — provide this **or** `total_occurrences`      |
+| `total_occurrences` | One of   | Number of occurrences — provide this **or** `end_date`           |
+
+### Viewing Classes
+
+```
+GET /classes/
+Auth: None (public)
+```
+
+Returns a flat list. Each entry has:
+- `occurrence_date` — the specific session datetime
+- `enrolled` — how many members have booked that session
+- `capacity` — maximum spots for that session
+
+Recurring classes produce multiple entries (one per occurrence). Non-recurring classes produce one entry where `occurrence_date` equals the schedule.
+
+### Booking a Specific Occurrence
+
+```
+POST /classes/<class_id>/book
+Auth: Member
+```
+
+**Body (always required):**
+```json
+{
+  "occurrence_date": "2027-06-01T08:00:00"
+}
+```
+
+Copy the `occurrence_date` value from the `GET /classes/` listing. Each occurrence has independent capacity — booking one session full does **not** block other sessions.
+
+### Viewing Members for an Occurrence
+
+```
+POST /classes/<class_id>/members
+Auth: Trainer or Admin
+```
+
+**Body (optional):**
+```json
+{
+  "occurrence_date": "2027-06-01T08:00:00"
+}
+```
+
+- With `occurrence_date`: returns only members booked for that session.
+- Without it: returns all members across all occurrences (deduplicated).
+
+### Updating Recurrence
+
+```
+PATCH /classes/<class_id>/recurrence
+Auth: Trainer or Admin
+```
+
+**Body:**
+```json
+{
+  "frequency": "weekly",
+  "days_of_week": ["tuesday", "thursday"],
+  "total_occurrences": 8
+}
+```
+
+Applies to future occurrences only. Existing bookings are preserved.
+
+### Sending Occurrence-Scoped Reminders
+
+```
+POST /classes/<class_id>/send-reminder
+Auth: Trainer or Admin
+```
+
+**Body (optional):**
+```json
+{
+  "occurrence_date": "2027-06-01T08:00:00"
+}
+```
+
+- With `occurrence_date`: sends reminders only to members booked for that session.
+- Without it: sends reminders to all booked members across all occurrences.
+
+---
+
 ## Running Tests
 
 ### Setup
@@ -238,13 +363,14 @@ You can see a visual report by viewing /htmlcov/index.html
 
 ### Classes
 
-| Method | Endpoint                            | Auth          | Description               |
-| ------ | ----------------------------------- | ------------- | ------------------------- |
-| GET    | `/classes/`                         | None          | List all upcoming classes |
-| POST   | `/classes/`                         | Trainer/Admin | Create a new class        |
-| POST   | `/classes/<class_id>/book`          | Member        | Book a spot in a class    |
-| GET    | `/classes/<class_id>/members`       | Trainer/Admin | View booked members       |
-| POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminder emails      |
+| Method | Endpoint                            | Auth          | Description                          |
+| ------ | ----------------------------------- | ------------- | ------------------------------------ |
+| GET    | `/classes/`                         | None          | List all classes with occurrences    |
+| POST   | `/classes/`                         | Trainer/Admin | Create a class (optionally recurring)|
+| POST   | `/classes/<class_id>/book`          | Member        | Book a specific occurrence           |
+| POST   | `/classes/<class_id>/members`       | Trainer/Admin | View booked members (by occurrence)  |
+| PATCH  | `/classes/<class_id>/recurrence`    | Trainer/Admin | Update recurrence rule               |
+| POST   | `/classes/<class_id>/send-reminder` | Trainer/Admin | Send reminders (by occurrence)       |
 
 
 
@@ -253,10 +379,11 @@ You can see a visual report by viewing /htmlcov/index.html
 1. Register as a **Member** or **Trainer/Admin**
 2. Login → copy the JWT token
 3. Authorize in Swagger using `Bearer <JWT>`
-4. Create a class (Trainer/Admin) → `POST /classes/`
-5. Book a class (Member) → `POST /classes/<class_id>/book`
-6. View booked members (Trainer/Admin) → `GET /classes/<class_id>/members`
-7. Send reminders (Trainer/Admin) → `POST /classes/<class_id>/send-reminder`
+4. Create a class (Trainer/Admin) → `POST /classes/` (optionally with `recurrence`)
+5. List classes (anyone) → `GET /classes/` — note the `occurrence_date` values
+6. Book a session (Member) → `POST /classes/<class_id>/book` with `{"occurrence_date": "..."}`
+7. View booked members (Trainer/Admin) → `POST /classes/<class_id>/members`
+8. Send reminders (Trainer/Admin) → `POST /classes/<class_id>/send-reminder`
 
 ---
 
@@ -264,17 +391,19 @@ You can see a visual report by viewing /htmlcov/index.html
 
 ### Test Structure
 
-| Test File                       | What it covers                                     |
-|---------------------------------|----------------------------------------------------|
-| `test_auth.py`                  | Register and login endpoints                       |
-| `test_bookings.py`              | Class booking logic                                |
-| `test_classes.py`               | Class creation and member viewing                  |
-| `test_reminders.py`             | Email reminder endpoint and email service          |
-| `test_config.py`                | App configuration                                  |
-| `test_db_utils.py`              | Database utility functions                         |
-| `test_notification_channels.py` | EmailChannel and TelegramChannel unit tests        |
-| `test_notification_service.py`  | NotificationService dispatch logic                 |
-| `test_preferences.py`           | Notification preferences endpoint and registration |
+| Test File                       | What it covers                                             |
+|---------------------------------|------------------------------------------------------------|
+| `test_auth.py`                  | Register and login endpoints                               |
+| `test_bookings.py`              | Class booking logic (non-recurring with occurrence_date)   |
+| `test_classes.py`               | Class creation, public listing, and member viewing         |
+| `test_recurring_classes.py`     | Recurring class creation, per-occurrence booking & members |
+| `test_recurrence.py`            | Recurrence model validation and occurrence generation      |
+| `test_reminders.py`             | Reminder endpoint (non-recurring and occurrence-scoped)    |
+| `test_config.py`                | App configuration                                          |
+| `test_db_utils.py`              | Database utility functions                                 |
+| `test_notification_channels.py` | EmailChannel and TelegramChannel unit tests                |
+| `test_notification_service.py`  | NotificationService dispatch logic                         |
+| `test_preferences.py`           | Notification preferences endpoint and registration         |
 
 ### Testing Notes
 

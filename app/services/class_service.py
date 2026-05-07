@@ -36,36 +36,50 @@ notification_service = NotificationService([
 
 def get_public_classes():
     """
-    Fetches all classes and expands recurring classes into individual
-    occurrence entries for public display. Non-recurring classes are
-    returned as-is.
+    Fetches all classes and expands every class into occurrence entries.
+
+    Recurring classes produce multiple entries (one per occurrence).
+    Non-recurring classes produce a single entry with their schedule
+    as the occurrence_date.
+
+    Every entry includes a per-occurrence enrolled count.
     """
     raw_classes = class_repo.get_all_classes()
     result = []
 
     for c in raw_classes:
+        class_id = c.get("id")
         base = {
-            "id": c.get("id"),
+            "id": class_id,
             "name": c.get("name"),
             "instructor": c.get("instructor"),
             "capacity": c.get("capacity"),
-            "enrolled": c.get("enrolled"),
             "location": c.get("location"),
             "description": c.get("description"),
         }
 
         recurrence = c.get("recurrence")
+
         if recurrence:
-            # Include the recurrence rule metadata once
             base["recurrence"] = recurrence
             occurrences = recurrence_service.get_occurrences(c)
             for occ in occurrences:
                 entry = dict(base)
                 entry["schedule"] = c.get("schedule")
-                entry["occurrence_date"] = occ.isoformat()
+                occ_str = occ.isoformat()
+                entry["occurrence_date"] = occ_str
+                entry["enrolled"] = class_repo.get_occurrence_enrolled(
+                    class_id, occ_str
+                )
                 result.append(entry)
         else:
-            base["schedule"] = c.get("schedule")
+            # Non-recurring: single occurrence = the schedule date
+            schedule = c.get("schedule")
+            base["schedule"] = schedule
+            base["occurrence_date"] = schedule
+            base["enrolled"] = class_repo.get_occurrence_enrolled(
+                class_id, schedule
+            )
             result.append(base)
 
     return result
@@ -106,45 +120,63 @@ def create_class(name: str, instructor: str, schedule: str, capacity: int,
 def book_class_for_member(class_id: str, member_email: str,
                           occurrence_date: str = None):
     """
-    Handles business logic for booking a class or a specific occurrence
-    of a recurring class.
+    Handles business logic for booking a specific occurrence of a class.
+
+    occurrence_date is always required. For non-recurring classes it should
+    match the class schedule. For recurring classes it must be a valid
+    occurrence of the recurrence rule.
 
     Args:
         class_id:        The ID of the class to book.
         member_email:    The member's email address.
-        occurrence_date: Optional ISO datetime string for a specific
-                         occurrence of a recurring class.
+        occurrence_date: ISO datetime string of the occurrence to book.
+    """
+    if not occurrence_date:
+        raise ValueError("occurrence_date is required to book a class.")
+
+    cls = class_repo.get_class_by_id(class_id)
+    if cls is None:
+        raise ValueError("Class not found.")
+
+    # Validate the occurrence_date is a real occurrence of this class
+    if not recurrence_service.is_valid_occurrence(cls, occurrence_date):
+        raise ValueError(
+            "The specified occurrence_date is not a valid occurrence "
+            "of this class."
+        )
+
+    # Ensure the occurrence is in the future
+    if not date_validation(occurrence_date):
+        raise ValueError("Cannot book an occurrence that has already passed.")
+
+    return class_repo.book_class(class_id, member_email,
+                                 occurrence_date=occurrence_date)
+
+
+def get_class_members(class_id: str, occurrence_date: str = None):
+    """
+    Retrieves the list of members for a specific occurrence of a class.
+
+    Args:
+        class_id:        The class document ID.
+        occurrence_date: The occurrence to query. If provided, validates
+                         against the class schedule/recurrence. If omitted,
+                         returns all members across all occurrences.
     """
     cls = class_repo.get_class_by_id(class_id)
     if cls is None:
         raise ValueError("Class not found.")
 
-    # For recurring classes, validate the requested occurrence
-    if cls.get("recurrence"):
-        if not occurrence_date:
-            raise ValueError(
-                "occurrence_date is required when booking a recurring class."
-            )
+    # Validate occurrence_date if provided
+    if occurrence_date:
         if not recurrence_service.is_valid_occurrence(cls, occurrence_date):
             raise ValueError(
                 "The specified occurrence_date is not a valid occurrence "
-                "of this recurring class."
+                "of this class."
             )
-        # Ensure the occurrence is in the future
-        if not date_validation(occurrence_date):
-            raise ValueError("Cannot book an occurrence that has already passed.")
-    else:
-        if not date_validation(cls.get('schedule', '')):
-            raise ValueError("Cannot book a class that has already ended.")
 
-    return class_repo.book_class(class_id, member_email)
-
-
-def get_class_members(class_id: str):
-    """
-    Retrieves the list of members for a specific class.
-    """
-    members = class_repo.get_booked_members(class_id)
+    members = class_repo.get_booked_members(class_id,
+                                            occurrence_date=occurrence_date)
     if members is None:
         raise ValueError("Class not found.")
     if len(members) == 0:
@@ -180,27 +212,68 @@ def update_class_recurrence(class_id: str, recurrence_data: dict):
         recurrence_data, effective_start
     )
 
-    return class_repo.update_class_recurrence(class_id, recurrence_dict)
+    # Update both recurrence rule AND schedule so rrule uses correct dtstart
+    # (fixes Recurrence Update Bug #4)
+    new_schedule = effective_start.isoformat()
+
+    return class_repo.update_class_recurrence(
+        class_id, recurrence_dict, new_schedule=new_schedule
+    )
 
 
-def send_class_reminders(class_id: str):
+def send_class_reminders(class_id: str, occurrence_date: str = None):
     """
     Orchestrates the reminder process using the Strategy Pattern.
     Dispatches notifications to each member based on their preferences.
+
+    Args:
+        class_id:        The class document ID.
+        occurrence_date: The occurrence to send reminders for. If provided,
+                         only members booked for that occurrence are notified.
+                         If omitted, all booked members are notified.
     """
     cls = class_repo.get_class_by_id(class_id)
     if cls is None:
         raise ValueError("Class not found.")
 
-    members = cls.get('booked_members', [])
+    # Validate occurrence_date if provided
+    if occurrence_date:
+        if not recurrence_service.is_valid_occurrence(cls, occurrence_date):
+            raise ValueError(
+                "The specified occurrence_date is not a valid occurrence "
+                "of this class."
+            )
+        if not date_validation(occurrence_date):
+            raise ValueError(
+                "Cannot send reminders for an occurrence that has already passed."
+            )
+    else:
+        # No occurrence specified — check the base schedule hasn't passed
+        if not date_validation(cls.get('schedule', '')):
+            raise ValueError("Cannot send reminders for a class that has already ended.")
+
+    # Get members scoped to the occurrence if provided
+    members = class_repo.get_booked_members(class_id,
+                                            occurrence_date=occurrence_date)
     if not members:
         raise ValueError("No booked members for this class.")
 
-    if not date_validation(cls.get('schedule', '')):
-        raise ValueError("Cannot send reminders for a class that has already ended.")
+    # Build subject and body — use occurrence date if provided
+    schedule_for_template = occurrence_date or cls.get('schedule', '')
+    template_data = dict(cls)
+    template_data['schedule'] = schedule_for_template
+    # Set enrolled to occurrence-specific count
+    if occurrence_date:
+        bookings = cls.get('bookings_by_occurrence', {})
+        occ_data = bookings.get(occurrence_date, {})
+        template_data['enrolled'] = occ_data.get('enrolled', 0)
+    else:
+        template_data['enrolled'] = sum(
+            occ.get('enrolled', 0)
+            for occ in cls.get('bookings_by_occurrence', {}).values()
+        )
 
-    # Build subject and body once for all members
-    subject, body = get_class_reminder_template(cls)
+    subject, body = get_class_reminder_template(template_data)
 
     all_sent = []
     all_failed = []

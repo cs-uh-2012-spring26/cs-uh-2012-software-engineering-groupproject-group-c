@@ -119,22 +119,35 @@ def test_get_classes_populated(client, trainer_token, valid_class_payload):
     # Verify Privacy: `booked_members` should be hidden
     first_class = res.json["classes"][0]
     assert "booked_members" not in first_class
+    # Every class entry should have occurrence_date
+    assert "occurrence_date" in first_class
 
 # =========================================================================== #
-# TESTS: GET /classes/<id>/members (View Members)
+# TESTS: POST /classes/<id>/members (View Members)
 # =========================================================================== #
 
-def test_get_class_members_success(client, trainer_token, valid_class_payload):
+def test_get_class_members_success(client, trainer_token, member_token, valid_class_payload):
     headers = {"Authorization": f"Bearer {trainer_token}"}
     # Create class
     res = client.post("/classes/", json=valid_class_payload, headers=headers)
     assert res.status_code == 201 
     class_id = res.json["id"]
 
-    # Get members - Ensure the path matches your @api.route('/<string:class_id>/members')
-    res_members = client.get(f"/classes/{class_id}/members", headers=headers)
+    # Book a member using occurrence_date (= schedule for non-recurring)
+    client.post(
+        f"/classes/{class_id}/book",
+        json={"occurrence_date": "2027-03-10T08:00"},
+        headers={"Authorization": f"Bearer {member_token}"},
+    )
 
-    assert res_members.status_code in [HTTPStatus.OK, HTTPStatus.NOT_FOUND]
+    # Get members for that occurrence via POST with body
+    res_members = client.post(
+        f"/classes/{class_id}/members",
+        json={"occurrence_date": "2027-03-10T08:00"},
+        headers=headers,
+    )
+    assert res_members.status_code == HTTPStatus.OK
+    assert "member@nyu.edu" in res_members.json["booked_members"]
 
 def test_get_class_members_member_forbidden(client, trainer_token, member_token, valid_class_payload):
 
@@ -142,11 +155,11 @@ def test_get_class_members_member_forbidden(client, trainer_token, member_token,
     class_id = res.json["id"]
     
 
-    res_members = client.get(f"/classes/{class_id}/members", headers={"Authorization": f"Bearer {member_token}"})
+    res_members = client.post(f"/classes/{class_id}/members", headers={"Authorization": f"Bearer {member_token}"})
     assert res_members.status_code == HTTPStatus.FORBIDDEN
     assert "Access denied" in res_members.json["message"]
 
 def test_get_class_members_not_found(client, trainer_token):
     headers = {"Authorization": f"Bearer {trainer_token}"}
-    res = client.get("/classes/invalid_fake_id/members", headers=headers)
+    res = client.post("/classes/invalid_fake_id/members", headers=headers)
     assert res.status_code == HTTPStatus.NOT_FOUND

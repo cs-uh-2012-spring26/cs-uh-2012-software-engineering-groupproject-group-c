@@ -80,10 +80,11 @@ recurrence_input = {
 
 book_occurrence_input = {
     'occurrence_date': fields.String(
-        required=False,
+        required=True,
         example='2026-03-12T08:00',
-        description="ISO 8601 datetime of the specific occurrence to book "
-                    "(required for recurring classes)."
+        description="ISO 8601 datetime of the occurrence to book. "
+                    "For non-recurring classes use the class schedule date. "
+                    "For recurring classes use a valid occurrence date."
     ),
 }
 
@@ -108,5 +109,29 @@ update_recurrence_input = {
         required=False,
         example=20,
         description="Total number of occurrences. Provide this OR end_date."
+    ),
+}
+
+# --- Reminder input ---
+
+send_reminder_input = {
+    'occurrence_date': fields.String(
+        required=False,
+        example='2026-03-12T08:00',
+        description="ISO 8601 datetime of the specific occurrence to send "
+                    "reminders for (optional, scopes to a single occurrence "
+                    "of a recurring class)."
+    ),
+}
+
+# --- View members input ---
+
+view_members_input = {
+    'occurrence_date': fields.String(
+        required=False,
+        example='2026-03-12T08:00',
+        description="ISO 8601 datetime of the occurrence to view members for. "
+                    "Copy this value from the GET /classes/ listing. "
+                    "If omitted, returns all members across all occurrences."
     ),
 }

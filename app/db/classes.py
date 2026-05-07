@@ -1,6 +1,7 @@
 """
 Database operations for fitness classes following the Repository Pattern (DIP).
 """
+from datetime import datetime
 from app.db.constants import CLASS_COLLECTION
 import uuid
 
@@ -20,7 +21,7 @@ class ClassRepository:
         if cls is None:
             return None
         cls = dict(cls)
-        cls['id'] = cls['_id']
+        cls['id'] = str(cls['_id'])
         del cls['_id']
         return cls
     
@@ -34,7 +35,10 @@ class ClassRepository:
                   capacity: int, location: str,
                   description: str = '',
                   recurrence: dict = None) -> dict:
-        """Insert a new fitness class into the database."""
+        """Insert a new fitness class into the database.
+
+        All classes use bookings_by_occurrence for per-occurrence tracking.
+        """
 
         col = self._get_col()
         new_class = {
@@ -45,8 +49,7 @@ class ClassRepository:
             'capacity': capacity,
             'location': location.strip(),
             'description': description.strip(),
-            'enrolled': 0,
-            'booked_members': [],
+            'bookings_by_occurrence': {},
         }
         if recurrence is not None:
             new_class['recurrence'] = recurrence
@@ -66,8 +69,22 @@ class ClassRepository:
         classes = col.find()
         return [self._class_to_dict(cls) for cls in classes]
 
-    def book_class(self, class_id: str, member_email: str) -> dict:
-        """Book a spot in a fitness class for a member."""
+    def book_class(self, class_id: str, member_email: str,
+                   occurrence_date: str = None) -> dict:
+        """Book a spot in a specific occurrence of a fitness class.
+
+        Args:
+            class_id:        The class document ID.
+            member_email:    The member's email address.
+            occurrence_date: ISO datetime string for the occurrence to book.
+
+        Returns:
+            Dict with booking result including per-occurrence enrolled
+            count and class capacity.
+
+        Raises:
+            ValueError: If class not found, already booked, or full.
+        """
         col = self._get_col()
         query_id = self._format_id(class_id)
 
@@ -75,30 +92,86 @@ class ClassRepository:
 
         if cls is None:
             raise ValueError('Class not found.')
-        
+
+        if not occurrence_date:
+            raise ValueError('occurrence_date is required to book a class.')
+
+        occ_key = f'bookings_by_occurrence.{occurrence_date}'
+        bookings = cls.get('bookings_by_occurrence', {})
+        occ_data = bookings.get(occurrence_date, {
+            'enrolled': 0, 'booked_members': []
+        })
+
+        # Check if already booked for this occurrence
+        if member_email in occ_data.get('booked_members', []):
+            raise ValueError('You have already booked this occurrence.')
+
+        # Check capacity for this occurrence
+        if occ_data.get('enrolled', 0) >= cls['capacity']:
+            raise ValueError('This occurrence is full.')
+
+        # Atomic update using dot notation for the specific occurrence
         update_result = col.update_one(
             {
                 '_id': query_id,
-                'booked_members': {'$ne': member_email}, 
-                'enrolled': {'$lt': cls['capacity']} 
+                f'{occ_key}.booked_members': {'$ne': member_email},
             },
             {
-                '$push': {'booked_members': member_email},
-                '$inc':  {'enrolled': 1},
+                '$push': {f'{occ_key}.booked_members': member_email},
+                '$inc':  {f'{occ_key}.enrolled': 1},
             }
         )
 
+        # If no sub-document existed yet (first booking for this occurrence),
+        # the $ne check on a missing field won't match.  Initialise and retry.
         if update_result.modified_count == 0:
-            if member_email in cls.get('booked_members', []):
-                raise ValueError('You have already booked this class.')
-            else:
-                raise ValueError('Class is full.')
+            init_result = col.update_one(
+                {
+                    '_id': query_id,
+                    occ_key: {'$exists': False},
+                },
+                {
+                    '$set': {
+                        occ_key: {
+                            'enrolled': 1,
+                            'booked_members': [member_email],
+                        }
+                    }
+                }
+            )
+            if init_result.modified_count == 0:
+                # Sub-doc exists but the first update didn't match
+                if member_email in occ_data.get('booked_members', []):
+                    raise ValueError('You have already booked this occurrence.')
+                else:
+                    raise ValueError('This occurrence is full.')
 
         updated = col.find_one({'_id': query_id})
-        return self._class_to_dict(updated)
+        result = self._class_to_dict(updated)
 
-    def get_booked_members(self, class_id: str) -> list[str]:
-        """Retrieve the list of member emails who have booked a class."""
+        # Return per-occurrence enrolled count
+        updated_bookings = result.get('bookings_by_occurrence', {})
+        occ = updated_bookings.get(occurrence_date, {})
+        result['enrolled'] = occ.get('enrolled', 0)
+
+        return result
+
+    def get_booked_members(self, class_id: str,
+                           occurrence_date: str = None) -> list[str]:
+        """Retrieve the list of member emails who have booked a class.
+
+        Args:
+            class_id:        The class document ID.
+            occurrence_date: The specific occurrence date to query.
+                             If omitted, returns all members across all
+                             occurrences (deduplicated).
+
+        Returns:
+            List of member email strings.
+
+        Raises:
+            ValueError: If the class is not found.
+        """
         col = self._get_col()
         query_id = self._format_id(class_id)
 
@@ -107,15 +180,67 @@ class ClassRepository:
         if cls is None:
             raise ValueError('Class not found.')
 
-        return cls.get('booked_members', [])
+        bookings = cls.get('bookings_by_occurrence', {})
+
+        if occurrence_date:
+            occ = bookings.get(occurrence_date, {})
+            return occ.get('booked_members', [])
+        else:
+            # Return all members across all occurrences (deduplicated)
+            all_members = []
+            seen = set()
+            for occ_data in bookings.values():
+                for email in occ_data.get('booked_members', []):
+                    if email not in seen:
+                        all_members.append(email)
+                        seen.add(email)
+            return all_members
+
+    def get_occurrence_enrolled(self, class_id: str,
+                                occurrence_date: str) -> int:
+        """Get the enrolled count for a specific occurrence.
+
+        Reads directly from the database to ensure accuracy.
+
+        Args:
+            class_id:        The class document ID.
+            occurrence_date: ISO datetime of the occurrence.
+
+        Returns:
+            Integer enrolled count.
+        """
+        col = self._get_col()
+        query_id = self._format_id(class_id)
+        cls = col.find_one({'_id': query_id})
+        if cls is None:
+            return 0
+        bookings = cls.get('bookings_by_occurrence', {})
+        # Try exact key match first, then try matching by parsed datetime
+        if occurrence_date in bookings:
+            return bookings[occurrence_date].get('enrolled', 0)
+        # Fallback: parse both sides and compare as datetime objects
+        try:
+            target_dt = datetime.fromisoformat(occurrence_date)
+        except (ValueError, TypeError):
+            return 0
+        for key, occ_data in bookings.items():
+            try:
+                if datetime.fromisoformat(key) == target_dt:
+                    return occ_data.get('enrolled', 0)
+            except (ValueError, TypeError):
+                continue
+        return 0
 
     def update_class_recurrence(self, class_id: str,
-                                recurrence: dict = None) -> dict:
+                                recurrence: dict = None,
+                                new_schedule: str = None) -> dict:
         """Update or remove the recurrence rule on an existing class.
 
         Args:
-            class_id:   The class document ID.
-            recurrence: New recurrence dict, or None to remove recurrence.
+            class_id:     The class document ID.
+            recurrence:   New recurrence dict, or None to remove recurrence.
+            new_schedule: If provided, also update the schedule field so
+                          rrule uses the correct dtstart.
 
         Returns:
             Updated class dict.
@@ -127,7 +252,10 @@ class ClassRepository:
         query_id = self._format_id(class_id)
 
         if recurrence is not None:
-            update_op = {'$set': {'recurrence': recurrence}}
+            set_fields = {'recurrence': recurrence}
+            if new_schedule:
+                set_fields['schedule'] = new_schedule
+            update_op = {'$set': set_fields}
         else:
             update_op = {'$unset': {'recurrence': ''}}
 
