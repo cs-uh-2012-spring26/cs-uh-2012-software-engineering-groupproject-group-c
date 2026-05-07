@@ -311,36 +311,6 @@ docker compose down
 
 ---
 
-## Common Commands
-
-| Command | Purpose |
-|---------|---------|
-| `docker compose up` | Start API + MongoDB |
-| `docker compose down` | Stop containers |
-| `docker compose logs -f api` | View API logs |
-| `docker compose ps` | Check container status |
-
----
-
-## Troubleshooting
-
-**"Cannot connect to Docker daemon"**
-- Start Docker Desktop
-
-**"Port 8000 already in use"**
-- Change port in docker-compose.yml: `"8001:8000"`
-
-**"pytest: executable file not found"**
-- Use: `docker compose -f docker-compose.test.yml up`
-
----
-
-## Why Docker?
-
-- One command setup (no manual dependency installation)
-- Tests run in isolated environment
-- Same setup for everyone
-- Ready for CI/CD and production deployment
 
 ## Virtual Environment Management
 
