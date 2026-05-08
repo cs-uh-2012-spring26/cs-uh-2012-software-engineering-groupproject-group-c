@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fitness Class Management — Book and manage fitness classes online.">
+    <title>FitClass — Fitness Class Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/app/style.css">
+</head>
+
+<body>
+
+    <!-- ───────── NAV BAR ───────── -->
+    <nav id="navbar">
+        <div class="nav-left">
+            <div class="nav-brand" id="nav-brand">💪 FitClass</div>
+            <div class="nav-links">
+                <button class="nav-link active" data-page="classes" id="nav-classes">📋 Classes</button>
+                <button class="nav-link hidden" data-page="create" id="nav-create">➕ Create</button>
+                <button class="nav-link hidden" data-page="preferences" id="nav-prefs">⚙️ Preferences</button>
+                <button class="nav-link" data-page="auth" id="nav-auth">🔑 Login</button>
+            </div>
+        </div>
+        <div id="nav-user" class="nav-user hidden">
+            <span class="user-badge" id="nav-greeting"></span>
+            <button id="btn-logout" class="btn btn-outline btn-sm">Log out</button>
+        </div>
+    </nav>
+
+    <!-- ───────── CONFIRMATION MODAL ───────── -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 id="modal-title">Confirm Action</h3>
+            <p id="modal-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn btn-outline">Cancel</button>
+                <button id="modal-confirm" class="btn btn-primary-sm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ───────── DETAILS MODAL (for members list etc.) ───────── -->
+    <div id="details-overlay" class="modal-overlay hidden">
+        <div class="modal-card modal-wide">
+            <div class="modal-header">
+                <h3 id="details-title">Details</h3>
+                <button id="details-close" class="btn-icon">✕</button>
+            </div>
+            <div id="details-body" class="details-body"></div>
+        </div>
+    </div>
+
+    <!-- ───────── RECURRENCE MODAL ───────── -->
+    <div id="recurrence-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Update Recurrence</h3>
+                <button id="recurrence-close" class="btn-icon">✕</button>
+            </div>
+            <form id="recurrence-form" class="form">
+                <input type="hidden" id="rec-class-id">
+                <label for="rec-frequency">Frequency</label>
+                <select id="rec-frequency" required>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+                <div id="rec-days-field">
+                    <label>Days of Week</label>
+                    <div class="checkbox-row">
+                        <label class="chip-label"><input type="checkbox" value="monday"> Mon</label>
+                        <label class="chip-label"><input type="checkbox" value="tuesday"> Tue</label>
+                        <label class="chip-label"><input type="checkbox" value="wednesday"> Wed</label>
+                        <label class="chip-label"><input type="checkbox" value="thursday"> Thu</label>
+                        <label class="chip-label"><input type="checkbox" value="friday"> Fri</label>
+                        <label class="chip-label"><input type="checkbox" value="saturday"> Sat</label>
+                        <label class="chip-label"><input type="checkbox" value="sunday"> Sun</label>
+                    </div>
+                </div>
+                <label for="rec-end-date">End Date (or leave blank)</label>
+                <input id="rec-end-date" type="datetime-local">
+                <label for="rec-occurrences">Total Occurrences (or leave blank)</label>
+                <input id="rec-occurrences" type="number" min="1" placeholder="e.g. 10">
+                <button type="submit" class="btn btn-primary">Update Recurrence</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ───────── REMINDER PROMPT MODAL ───────── -->
+    <div id="reminder-prompt-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3>Send Reminder</h3>
+            <p>Who do you want to send this reminder to?</p>
+            <div class="modal-actions" style="flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                <button id="reminder-prompt-this" class="btn btn-primary-sm" style="width: 100%;">This Occurrence
+                    Only</button>
+                <button id="reminder-prompt-all" class="btn btn-outline" style="width: 100%;">All Occurrences</button>
+                <button id="reminder-prompt-cancel" class="btn btn-ghost" style="width: 100%;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ───────── DATE PROMPT MODAL ───────── -->
+    <div id="date-prompt-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 id="date-prompt-title">Select Occurrence</h3>
+            <p id="date-prompt-message">Please provide the occurrence date for this action.</p>
+            <input type="date" id="date-prompt-input"
+                style="width:100%; margin-bottom:1rem; padding: 0.5rem; border: 1px solid var(--border, #ccc); border-radius: 4px; font-family: inherit;">
+            <div class="modal-actions">
+                <button id="date-prompt-cancel" class="btn btn-outline">Cancel</button>
+                <button id="date-prompt-confirm" class="btn btn-primary-sm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PAGE: CLASSES (default, always visible) ═══════════ -->
+    <section id="page-classes" class="page active section">
+        <div class="page-hero">
+            <h1>🏋️ Available Classes</h1>
+            <p class="hero-sub">Browse and book fitness classes</p>
+        </div>
+        <div class="card glass-card">
+            <div class="card-header">
+                <h2>Class Schedule</h2>
+                <div class="card-header-actions">
+                    <label class="toggle-label" id="filter-past-label">
+                        <input type="checkbox" id="filter-past" checked>
+                        <span>Upcoming only</span>
+                    </label>
+                    <button id="btn-refresh" class="btn btn-outline btn-sm">↻ Refresh</button>
+                </div>
+            </div>
+            <div id="class-list" class="class-list">
+                <p class="placeholder-text">Loading classes…</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════ PAGE: CREATE CLASS ═══════════ -->
+    <section id="page-create" class="page section">
+        <div class="page-hero">
+            <h1>➕ Create a Class</h1>
+            <p class="hero-sub">Set up a new fitness class for your members</p>
+        </div>
+        <div class="card glass-card">
+            <form id="create-class-form" class="form grid-form">
+                <div>
+                    <label for="cc-name">Class Name</label>
+                    <input id="cc-name" type="text" placeholder="Morning Yoga" required>
+                </div>
+                <div>
+                    <label for="cc-instructor">Instructor</label>
+                    <input id="cc-instructor" type="text" placeholder="Jane Doe" required>
+                </div>
+                <div>
+                    <label for="cc-schedule">Schedule</label>
+                    <input id="cc-schedule" type="datetime-local" required>
+                </div>
+                <div>
+                    <label for="cc-capacity">Capacity</label>
+                    <input id="cc-capacity" type="number" min="1" value="20" required>
+                </div>
+                <div>
+                    <label for="cc-location">Location</label>
+                    <input id="cc-location" type="text" placeholder="Studio A" required>
+                </div>
+                <div>
+                    <label for="cc-description">Description</label>
+                    <input id="cc-description" type="text" placeholder="A relaxing flow for all levels.">
+                </div>
+
+                <!-- Optional Recurrence -->
+                <div class="full-width">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="cc-recurrence-toggle">
+                        <span>Add Recurrence (optional)</span>
+                    </label>
+                </div>
+                <div id="cc-recurrence-fields" class="full-width recurrence-fields hidden">
+                    <div class="grid-form">
+                        <div>
+                            <label for="cc-rec-freq">Frequency</label>
+                            <select id="cc-rec-freq">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="cc-rec-end">End Date</label>
+                            <input id="cc-rec-end" type="datetime-local">
+                        </div>
+                        <div>
+                            <label for="cc-rec-occ">Total Occurrences</label>
+                            <input id="cc-rec-occ" type="number" min="1" placeholder="e.g. 10">
+                        </div>
+                        <div>
+                            <label>Days of Week (for weekly)</label>
+                            <div class="checkbox-row" id="cc-rec-days">
+                                <label class="chip-label"><input type="checkbox" value="monday"> Mon</label>
+                                <label class="chip-label"><input type="checkbox" value="tuesday"> Tue</label>
+                                <label class="chip-label"><input type="checkbox" value="wednesday"> Wed</label>
+                                <label class="chip-label"><input type="checkbox" value="thursday"> Thu</label>
+                                <label class="chip-label"><input type="checkbox" value="friday"> Fri</label>
+                                <label class="chip-label"><input type="checkbox" value="saturday"> Sat</label>
+                                <label class="chip-label"><input type="checkbox" value="sunday"> Sun</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="full-width">
+                    <button type="submit" class="btn btn-primary">Create Class</button>
+                </div>
+                <p id="create-class-error" class="error-msg hidden full-width"></p>
+                <p id="create-class-success" class="success-msg hidden full-width"></p>
+            </form>
+        </div>
+    </section>
+
+    <!-- ═══════════ PAGE: PREFERENCES ═══════════ -->
+    <section id="page-preferences" class="page section">
+        <div class="page-hero">
+            <h1>⚙️ Notification Preferences</h1>
+            <p class="hero-sub">Choose how you want to receive notifications</p>
+        </div>
+        <div class="card glass-card auth-card">
+            <form id="prefs-form" class="form">
+                <label>Notification Channels</label>
+                <div class="checkbox-row" id="prefs-channels">
+                    <label class="chip-label"><input type="checkbox" value="email" checked> 📧 Email</label>
+                    <label class="chip-label"><input type="checkbox" value="telegram"> 💬 Telegram</label>
+                </div>
+                <div id="prefs-telegram-field" class="hidden">
+                    <label for="prefs-telegram-id">Telegram Chat ID</label>
+                    <input id="prefs-telegram-id" type="text" placeholder="123456789">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Preferences</button>
+                <p id="prefs-error" class="error-msg hidden"></p>
+                <p id="prefs-success" class="success-msg hidden"></p>
+            </form>
+        </div>
+    </section>
+
+    <!-- ═══════════ PAGE: AUTH ═══════════ -->
+    <section id="page-auth" class="page section">
+        <div class="card glass-card auth-card">
+            <div class="tab-bar">
+                <button class="tab active" data-tab="login" id="tab-login">Login</button>
+                <button class="tab" data-tab="register" id="tab-register">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="form">
+                <h2>Welcome back 👋</h2>
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" placeholder="you@example.com" required>
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" placeholder="••••••••" required>
+                <button type="submit" class="btn btn-primary">Log in</button>
+                <p id="login-error" class="error-msg hidden"></p>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="form hidden">
+                <h2>Create account 🚀</h2>
+                <label for="reg-username">Username</label>
+                <input id="reg-username" type="text" placeholder="JaneDoe" required>
+                <label for="reg-email">Email</label>
+                <input id="reg-email" type="email" placeholder="jane@example.com" required>
+                <label for="reg-password">Password</label>
+                <input id="reg-password" type="password" placeholder="Min 8 chars, upper+lower+digit" required>
+                <label for="reg-phone">Phone</label>
+                <input id="reg-phone" type="tel" placeholder="1234567890" required>
+                <label for="reg-role">Role</label>
+                <select id="reg-role" required>
+                    <option value="member">Member</option>
+                    <option value="trainer">Trainer</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <label for="reg-notif">Notification Preference</label>
+                <select id="reg-notif">
+                    <option value="email">Email</option>
+                    <option value="telegram">Telegram</option>
+                </select>
+                <div id="telegram-field" class="hidden">
+                    <label for="reg-telegram">Telegram Chat ID</label>
+                    <input id="reg-telegram" type="text" placeholder="123456789">
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+                <p id="register-error" class="error-msg hidden"></p>
+                <p id="register-success" class="success-msg hidden"></p>
+            </form>
+        </div>
+    </section>
+
+    <!-- ───────── TOAST ───────── -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/app/app.js"></script>
+</body>
+
+</html>
