@@ -115,10 +115,13 @@ def update_notification_preferences(email: str, preferences: list,
 def get_user_by_phone(phone: str) -> Optional[dict]:
     """Retrieve a user by phone number."""
     col = _get_col()
-    user = col.find_one({'phone': phone.strip()})
-    if user is None:
-        return None
-    return get_user_by_email(user['email'])
+    normalized = ''.join(filter(str.isdigit, phone))[-9:]
+    all_users = col.find({}, {'phone': 1, 'email': 1})
+    for user in all_users:
+        stored = ''.join(filter(str.isdigit, user.get('phone', '')))[-9:]
+        if stored == normalized:
+            return get_user_by_email(user['email'])
+    return None
 
 
 def update_chat_id(email: str, chat_id: str) -> dict:

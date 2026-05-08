@@ -54,7 +54,7 @@ class TestTelegramWebhookContactSharing:
 
         assert response.status_code == 200
         assert response.get_json()['status'] == 'ok'
-        mock_get.assert_called_once_with('1501234567')  # normalized: no +, last 10 digits
+        mock_get.assert_called_once_with('501234567')  # normalized: no +, last 10 digits
         mock_update.assert_called_once_with('member@test.com', '123456')
 
     def test_contact_shared_user_not_found_sends_error(self, client):

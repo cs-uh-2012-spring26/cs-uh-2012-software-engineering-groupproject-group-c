@@ -18,8 +18,8 @@ def validate_user_data(password, phone, role, email, notification_preferences=No
     if not is_strong_password(password):
         raise ValueError("password must be at least 8 characters long and include an uppercase letter, lowercase letter, and number.")
 
-    if not re.match(r'^\d{10}$', phone):
-        raise ValueError("Invalid phone number format. Must be 10 digits.")
+    if not re.match(r'^\+?\d{7,15}$', phone):
+        raise ValueError("Invalid phone number format.")
 
     if role not in UserRole.values():
         raise ValueError(f"Invalid role. Must be one of: {', '.join(UserRole.values())}")
@@ -32,10 +32,6 @@ def validate_user_data(password, phone, role, email, notification_preferences=No
         if invalid:
             raise ValueError(f"Invalid notification channels: {invalid}. Allowed: {ALLOWED_CHANNELS}")
 
-    if notification_preferences and 'telegram' in notification_preferences:
-        if not telegram_chat_id:
-            raise ValueError("telegram_chat_id is required when telegram is selected as a notification channel.")
-    
 
 def verify_password(stored_hash: str, provided_password: str) -> bool:
     """Verify a provided password against a stored bcrypt hash."""
