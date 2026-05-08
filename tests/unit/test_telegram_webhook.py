@@ -109,7 +109,8 @@ class TestTelegramWebhookNonContactMessage:
             }
         }
 
-        with patch('app.apis.telegram_webhook.requests.post') as mock_post:
+        with patch('app.apis.telegram_webhook.requests.post') as mock_post, \
+            patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN': 'fake-token'}):
             mock_post.return_value = MagicMock(status_code=200)
             response = client.post('/telegram/webhook', json=payload)
 
