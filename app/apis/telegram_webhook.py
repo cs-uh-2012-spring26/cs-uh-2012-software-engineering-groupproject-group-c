@@ -50,6 +50,7 @@ def send_contact_request(chat_id: str):
 
 
 @api.route('/webhook')
+@api.hide
 class TelegramWebhook(Resource):
 
     def post(self):
@@ -74,7 +75,7 @@ class TelegramWebhook(Resource):
             phone_number = contact.get('phone_number', '').strip()
             # Normalize — remove + and spaces, keep last 10 digits
             phone_number = phone_number.replace('+', '').replace(' ', '')
-            phone_number = phone_number[-10:]
+            phone_number = phone_number[-9:]
 
             user = users_db.get_user_by_phone(phone_number)
             if user:

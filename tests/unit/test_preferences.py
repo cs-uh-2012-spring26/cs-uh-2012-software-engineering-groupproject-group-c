@@ -106,7 +106,7 @@ def test_register_with_invalid_channel(client):
 
 
 def test_register_telegram_without_chat_id(client):
-    """Returns 400 when registering with telegram but no chat_id."""
+    """Registering with telegram but no chat_id is now allowed - webhook captures it automatically."""
     res = client.post("/Authentication/register", json={
         "username": "NoIdUser",
         "email": "noid_user@nyu.edu",
@@ -115,4 +115,4 @@ def test_register_telegram_without_chat_id(client):
         "role": "Member",
         "notification_preferences": ["telegram"]
     })
-    assert res.status_code == HTTPStatus.BAD_REQUEST
+    assert res.status_code == HTTPStatus.CREATED
