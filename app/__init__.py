@@ -8,6 +8,7 @@ from flask_restx import Api
 from flask_jwt_extended import JWTManager  
 from app.apis.classes import api as classes_ns  
 from app.apis.auth import api as auth_ns
+from app.apis.telegram_webhook import api as telegram_ns
 
 def create_app():
     app = Flask(__name__)
@@ -34,6 +35,7 @@ def create_app():
     api.init_app(app)
     api.add_namespace(classes_ns) 
     api.add_namespace(auth_ns) 
+    api.add_namespace(telegram_ns)
 
     from flask_jwt_extended.exceptions import JWTExtendedException
     from jwt.exceptions import PyJWTError
