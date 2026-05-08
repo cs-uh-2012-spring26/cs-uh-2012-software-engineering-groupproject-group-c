@@ -5,20 +5,14 @@ services:
     container_name: fitness_db
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
     volumes:
       - mongo_data:/data/db
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 10s
       retries: 5
-    networks:
-      - fitness_network
 
-  # Flask API service
   api:
     build:
       context: .
@@ -27,17 +21,16 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MONGO_URI: "mongodb://root:rootpassword@mongodb:27017"
-      DB_NAME: "fitness_db"
-      DEBUG: "true"
-      FLASK_APP: "app"
-      JWT_SECRET_KEY: "your-secret-key-change-in-production"
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_REGION: ${AWS_REGION:-eu-north-1}
-      SES_SENDER_EMAIL: ${SES_SENDER_EMAIL:-}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      MOCK_DB: "false"
+      MONGO_URI: mongodb://mongodb:27017
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      SES_SENDER_EMAIL: ${SES_SENDER_EMAIL}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DEBUG: ${DEBUG}
+      MOCK_DB: ${MOCK_DB}
     
     depends_on:
       mongodb:
@@ -45,16 +38,7 @@ services:
     
     volumes:
       - .:/app
-    
-    networks:
-      - fitness_network
-    
-    command: flask run --host=0.0.0.0 --port=8000
 
 volumes:
   mongo_data:
-    driver: local
-
-networks:
-  fitness_network:
-    driver: bridge
+ 
