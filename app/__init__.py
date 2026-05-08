@@ -9,6 +9,7 @@ from flask_jwt_extended import JWTManager
 from app.apis.classes import api as classes_ns  
 from app.apis.auth import api as auth_ns
 from flask_cors import CORS
+from app.apis.telegram_webhook import api as telegram_ns
 
 def create_app():
     app = Flask(__name__, static_folder='../frontend', static_url_path='/app')
@@ -41,6 +42,7 @@ def create_app():
     api.init_app(app)
     api.add_namespace(classes_ns) 
     api.add_namespace(auth_ns) 
+    api.add_namespace(telegram_ns)
 
     from flask_jwt_extended.exceptions import JWTExtendedException
     from jwt.exceptions import PyJWTError

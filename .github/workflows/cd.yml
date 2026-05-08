@@ -1,0 +1,39 @@
+name: CD Deployment Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Testing Pipeline"] 
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ${{secrets.VM_PATH}}
+            git pull origin main      
+
+            echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
+            echo "DB_NAME=${{ secrets.PROD_DB_NAME }}" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.PROD_JWT_SECRET }}" >> .env
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.PROD_AWS_ACCESS_KEY_ID }}" >> .env
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}" >> .env
+            echo "AWS_REGION=${{ secrets.PROD_AWS_REGION }}" >> .env
+            echo "SES_SENDER_EMAIL=${{ secrets.PROD_SES_SENDER_EMAIL }}" >> .env
+            echo "TELEGRAM_BOT_TOKEN=${{ secrets.PROD_TELEGRAM_BOT_TOKEN }}" >> .env
+            echo "DEBUG=True" >> .env
+            echo "MOCK_DB=False" >> .env
+
+            docker compose up --build -d --remove-orphans

@@ -418,11 +418,26 @@ You can see a visual report by viewing /htmlcov/index.html
 
 ## Prerequisites
 
-**Docker Desktop must be downloaded and running before using any docker commands.**
+**1. Docker Desktop must be downloaded and running before using any docker commands.**
 
 - Download: https://www.docker.com/products/docker-desktop
 - Start Docker Desktop 
 - Verify: `docker --version && docker ps`
+
+**2. A `.env` file in the project root should be created with the following variables:**
+
+```env
+MONGO_URI="mongodb://localhost:27017"
+DB_NAME="fitness_db"
+MOCK_DB="false"
+DEBUG="true"
+JWT_SECRET_KEY="your-secret-key"
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=eu-north-1        # must match the region where you verified identities
+SES_SENDER_EMAIL=your_verified@email.com
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+```
 
 ## Quick Start
 
@@ -448,7 +463,7 @@ The application is deployed on a DigitalOcean VM and accessible at:
 
 http://209.38.232.149:8000
 
-The live system is automatically redeployed whenever code is pushed to main and CI passes.
+The live system is automatically redeployed and .env file is automatically created  whenever code is pushed to main and CI passes.
 
 
 ## Virtual Environment Management

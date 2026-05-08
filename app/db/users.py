@@ -111,3 +111,21 @@ def update_notification_preferences(email: str, preferences: list,
     )
 
     return get_user_by_email(email)
+
+def get_user_by_phone(phone: str) -> Optional[dict]:
+    """Retrieve a user by phone number."""
+    col = _get_col()
+    user = col.find_one({'phone': phone.strip()})
+    if user is None:
+        return None
+    return get_user_by_email(user['email'])
+
+
+def update_chat_id(email: str, chat_id: str) -> dict:
+    """Store a user's Telegram chat_id automatically via webhook."""
+    col = _get_col()
+    col.update_one(
+        {'email': email.strip().lower()},
+        {'$set': {'telegram_chat_id': chat_id}}
+    )
+    return get_user_by_email(email)
