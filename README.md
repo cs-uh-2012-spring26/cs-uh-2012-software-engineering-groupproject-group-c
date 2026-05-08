@@ -424,7 +424,7 @@ You can see a visual report by viewing /htmlcov/index.html
 - Start Docker Desktop 
 - Verify: `docker --version && docker ps`
 
-**2. A `.env` file in the project root should be created with the following variables:
+**2. A `.env` file in the project root should be created with the following variables:**
 
 ```env
 MONGO_URI="mongodb://localhost:27017"
