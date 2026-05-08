@@ -27,7 +27,7 @@ jobs:
 
             echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
             echo "DB_NAME=${{ secrets.PROD_DB_NAME }}" >> .env
-            echo "JWT_SECRET_KEY=${{ secrets.PROD_JWT_SECRET_KEY }}" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.PROD_JWT_SECRET }}" >> .env
             echo "AWS_ACCESS_KEY_ID=${{ secrets.PROD_AWS_ACCESS_KEY_ID }}" >> .env
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}" >> .env
             echo "AWS_REGION=${{ secrets.PROD_AWS_REGION }}" >> .env
