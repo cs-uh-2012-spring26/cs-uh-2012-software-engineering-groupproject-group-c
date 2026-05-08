@@ -57,10 +57,13 @@ class NotificationService:
 ```
 
 **How user preferences work:**
-- At registration, users can optionally specify `notification_preferences` (e.g. `['email']`, `['email', 'telegram']`) and a `telegram_chat_id`
+- At registration, users can optionally specify `notification_preferences` (e.g. `['email']`, `['email', 'telegram']`). A `telegram_chat_id` is no longer required at registration — it is captured automatically via the Telegram webhook
 - Preferences are stored per user in the MongoDB users collection
 - After registration, users can update preferences via `PATCH /Authentication/preferences`
 - When a trainer sends reminders, `send_class_reminders()` looks up each member's preferences and passes them to `NotificationService`, which dispatches only to their chosen channels
+
+**Telegram Webhook for Automatic chat_id Capture:**
+To remove the need for users to manually find and provide their chat_id, a webhook endpoint was implemented in `app/apis/telegram_webhook.py`. When a user messages the bot on Telegram and shares their contact, the webhook normalizes the phone number (last 9 digits to handle both local and international formats) and looks up the matching registered account using `get_user_by_phone()`. If a match is found, the chat_id is saved automatically via `update_chat_id()`. The endpoint is hidden from Swagger UI using `@api.hide` since it is called by Telegram's servers, not API users. End-to-end testing was performed using ngrok to expose the local server over HTTPS, confirming the full flow works correctly.
 
 **Extensibility:**
 Adding a new notification channel (e.g. SMS) requires only:

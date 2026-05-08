@@ -150,11 +150,14 @@ Email notifications use AWS SES. Follow the Email Reminder Feature Setup section
 2. Send `/newbot` and follow the instructions
 3. Copy the bot token provided
 
-#### Step 2: Get Your Chat ID
-1. Start a conversation with your bot on Telegram
-2. Either:
-   - Message `@myidbot` on Telegram and send `/getid`
-   - Or visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` after messaging your bot and find `"chat":{"id":...}`
+
+#### Step 2: Link Your Telegram Account (Automatic)
+Your chat_id is captured automatically — no manual lookup needed:
+1. Make sure your account was registered with your phone number
+2. Find your bot on Telegram and send any message
+3. The bot will ask you to share your contact — tap the button
+4. The bot confirms "Account linked successfully"
+5. Your chat_id is now saved automatically
 
 #### Step 3: Configure Environment Variables
 Add to your `.env` file:
@@ -163,7 +166,7 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 ```
 
 #### Step 4: Register with Notification Preferences
-When registering, optionally include your preferred notification channels and Telegram chat ID:
+When registering, optionally include your preferred notification channels:
 ```json
 POST /Authentication/register
 {
@@ -172,8 +175,7 @@ POST /Authentication/register
   "password": "Ahmed@123",
   "phone": "1234567890",
   "role": "member",
-  "notification_preferences": ["email", "telegram"],
-  "telegram_chat_id": "your_chat_id"
+  "notification_preferences": ["email", "telegram"]
 }
 ```
 If `notification_preferences` is not provided, it defaults to `["email"]`.
@@ -199,16 +201,14 @@ interrupting other notifications.
 The server must have access to `api.telegram.org` to send Telegram messages.
 If running in a restricted network, configure a proxy before starting the server.
 
-#### Note on Development Environment
-This feature was developed in a region where Telegram is restricted (Pakistan). 
-As a result, end-to-end Telegram testing was performed using unit tests with mocked 
-API calls rather than live integration tests. The implementation has been verified to 
-correctly construct and send the API request to Telegram's Bot API — the unit tests 
-confirm the correct `chat_id`, message format, and token usage. Full end-to-end 
-testing can be performed in an unrestricted network environment by following the 
-setup steps above.
+#### Note on Webhook Registration
+The Telegram webhook requires HTTPS. For local testing, use ngrok:
+```bash
+brew install ngrok
+ngrok http 8000
+curl "https://api.telegram.org/bot/setWebhook?url=https:///telegram/webhook"
+```
 
----
 
 ## Recurring Classes & Per-Occurrence Bookings (Feature 6)
 
@@ -404,6 +404,7 @@ You can see a visual report by viewing /htmlcov/index.html
 | `test_notification_channels.py` | EmailChannel and TelegramChannel unit tests                |
 | `test_notification_service.py`  | NotificationService dispatch logic                         |
 | `test_preferences.py`           | Notification preferences endpoint and registration         |
+| `test_telegram_webhook.py`      | Telegram webhook endpoint and chat_id storage              |
 
 ### Testing Notes
 
