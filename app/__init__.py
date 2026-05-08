@@ -3,16 +3,23 @@ from app.db import DB
 from werkzeug.exceptions import HTTPException
 
 from http import HTTPStatus
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_restx import Api
 from flask_jwt_extended import JWTManager  
 from app.apis.classes import api as classes_ns  
 from app.apis.auth import api as auth_ns
+from flask_cors import CORS
 from app.apis.telegram_webhook import api as telegram_ns
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='../frontend', static_url_path='/app')
     app.config.from_object(Config)
+    CORS(app)
+
+    @app.route('/app')
+    @app.route('/app/')
+    def serve_frontend():
+        return app.send_static_file('index.html')
 
     DB.init_app(app)
     jwt = JWTManager(app)   
