@@ -263,7 +263,7 @@ registerForm.addEventListener('submit', async e => {
         role: $('#reg-role').value,
         notification_preferences: [regNotif.value],
     };
-    if (regNotif.value === 'telegram') body.telegram_chat_id = $('#reg-telegram').value.trim();
+    
     const { ok, data } = await api('/Authentication/register', {
         method: 'POST', body: JSON.stringify(body),
     });
@@ -292,16 +292,8 @@ prefsForm.addEventListener('submit', async e => {
         return;
     }
 
+    // chat_id captured automatically via Telegram webhook
     const body = { notification_preferences: channels };
-    const telegramChecked = channels.includes('telegram');
-    if (telegramChecked) {
-        const chatId = $('#prefs-telegram-id').value.trim();
-        if (!chatId) {
-            showMsg(prefsError, 'Telegram Chat ID is required when telegram is selected.');
-            return;
-        }
-        body.telegram_chat_id = chatId;
-    }
 
     const yes = await confirmAction('Update Preferences', 'Save your notification preferences?');
     if (!yes) return;

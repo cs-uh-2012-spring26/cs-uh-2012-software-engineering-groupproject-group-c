@@ -52,14 +52,12 @@ def test_update_preferences_telegram(client, member_token):
 
 
 def test_update_preferences_telegram_missing_chat_id(client, member_token):
-    """Returns 400 when telegram selected but no chat_id provided."""
+    """Telegram can be selected without chat_id — webhook captures it automatically."""
     res = client.patch("/Authentication/preferences",
         json={"notification_preferences": ["telegram"]},
         headers={"Authorization": f"Bearer {member_token}"}
     )
-    assert res.status_code == HTTPStatus.BAD_REQUEST
-    assert "telegram_chat_id" in res.json["message"]
-
+    assert res.status_code == HTTPStatus.OK
 
 def test_update_preferences_invalid_channel(client, member_token):
     """Returns 400 for unknown notification channel."""
