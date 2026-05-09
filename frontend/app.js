@@ -37,7 +37,6 @@ const classList = $('#class-list');
 const btnRefresh = $('#btn-refresh');
 const tabs = document.querySelectorAll('.tab');
 const regNotif = $('#reg-notif');
-const telegramField = $('#telegram-field');
 
 // Recurrence toggle in create form
 const ccRecToggle = $('#cc-recurrence-toggle');
@@ -47,7 +46,6 @@ const ccRecFields = $('#cc-recurrence-fields');
 const prefsForm = $('#prefs-form');
 const prefsError = $('#prefs-error');
 const prefsSuccess = $('#prefs-success');
-const prefsTelegramField = $('#prefs-telegram-field');
 
 // Modal refs
 const modalOverlay = $('#modal-overlay');
@@ -212,20 +210,9 @@ tabs.forEach(tab => {
     });
 });
 
-// ── Telegram toggle (registration) ───────────────────────────
-regNotif.addEventListener('change', () => {
-    regNotif.value === 'telegram' ? show(telegramField) : hide(telegramField);
-});
-
 // ── Recurrence toggle (create class form) ────────────────────
 ccRecToggle.addEventListener('change', () => {
     ccRecToggle.checked ? show(ccRecFields) : hide(ccRecFields);
-});
-
-// ── Telegram toggle (preferences) ────────────────────────────
-$('#prefs-channels').addEventListener('change', () => {
-    const telegramChecked = $('#prefs-channels input[value="telegram"]').checked;
-    telegramChecked ? show(prefsTelegramField) : hide(prefsTelegramField);
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -263,7 +250,6 @@ registerForm.addEventListener('submit', async e => {
         role: $('#reg-role').value,
         notification_preferences: [regNotif.value],
     };
-    if (regNotif.value === 'telegram') body.telegram_chat_id = $('#reg-telegram').value.trim();
     const { ok, data } = await api('/Authentication/register', {
         method: 'POST', body: JSON.stringify(body),
     });
@@ -293,16 +279,6 @@ prefsForm.addEventListener('submit', async e => {
     }
 
     const body = { notification_preferences: channels };
-    const telegramChecked = channels.includes('telegram');
-    if (telegramChecked) {
-        const chatId = $('#prefs-telegram-id').value.trim();
-        if (!chatId) {
-            showMsg(prefsError, 'Telegram Chat ID is required when telegram is selected.');
-            return;
-        }
-        body.telegram_chat_id = chatId;
-    }
-
     const yes = await confirmAction('Update Preferences', 'Save your notification preferences?');
     if (!yes) return;
 

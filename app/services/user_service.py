@@ -106,10 +106,6 @@ def update_user_preferences(email: str, preferences: list,
     if invalid:
         raise ValueError(f"Invalid notification channels: {invalid}. Allowed: {ALLOWED_CHANNELS}")
 
-    # Telegram requires chat_id
-    if 'telegram' in preferences and not telegram_chat_id:
-        raise ValueError("telegram_chat_id is required when telegram is selected.")
-
     return users_db.update_notification_preferences(
         email=email,
         preferences=preferences,

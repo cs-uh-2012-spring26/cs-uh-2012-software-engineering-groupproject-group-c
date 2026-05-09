@@ -38,27 +38,18 @@ def test_update_preferences_email_only(client, member_token):
 
 
 def test_update_preferences_telegram(client, member_token):
-    """Member can update preferences to include telegram with chat_id."""
+    """Member can update preferences to include telegram without providing chat_id."""
     res = client.patch("/Authentication/preferences",
         json={
-            "notification_preferences": ["email", "telegram"],
-            "telegram_chat_id": "123456789"
+            "notification_preferences": ["email", "telegram"]
         },
         headers={"Authorization": f"Bearer {member_token}"}
     )
     assert res.status_code == HTTPStatus.OK
     assert "telegram" in res.json["notification_preferences"]
-    assert res.json["telegram_chat_id"] == "123456789"
 
 
-def test_update_preferences_telegram_missing_chat_id(client, member_token):
-    """Returns 400 when telegram selected but no chat_id provided."""
-    res = client.patch("/Authentication/preferences",
-        json={"notification_preferences": ["telegram"]},
-        headers={"Authorization": f"Bearer {member_token}"}
-    )
-    assert res.status_code == HTTPStatus.BAD_REQUEST
-    assert "telegram_chat_id" in res.json["message"]
+
 
 
 def test_update_preferences_invalid_channel(client, member_token):
@@ -86,8 +77,7 @@ def test_register_with_telegram_preferences(client):
         "password": "Password@123",
         "phone": "1234567890",
         "role": "Member",
-        "notification_preferences": ["email", "telegram"],
-        "telegram_chat_id": "987654321"
+        "notification_preferences": ["email", "telegram"]
     })
     assert res.status_code == HTTPStatus.CREATED
 

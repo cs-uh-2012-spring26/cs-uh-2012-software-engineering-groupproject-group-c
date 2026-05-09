@@ -11,11 +11,6 @@ register_input = {
         required=False,
         example=['email'],
         description="Notification channels: 'email', 'telegram'"
-    ),
-    'telegram_chat_id': fields.String(
-        required=False,
-        example='123456789',
-        description="Required if telegram is in notification_preferences"
     )
 }
 
@@ -32,11 +27,6 @@ preferences_input = {
         required=True,
         example=['email', 'telegram'],
         description="Notification channels: 'email', 'telegram'"
-    ),
-    'telegram_chat_id': fields.String(
-        required=False,
-        example='123456789',
-        description="Required if telegram is in notification_preferences"
     )
 }
 
