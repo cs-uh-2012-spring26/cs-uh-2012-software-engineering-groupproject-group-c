@@ -55,6 +55,25 @@ make dev_env
 ```
 Run the command above and it will create virtual environment as well as install all the dependencies. 
 
+## Virtual Environment Management
+
+* Activate: `source .venv/bin/activate`
+* Deactivate: `deactivate`
+
+
+---
+
+## Running Tests
+
+### Setup
+Make sure your virtual environment is active and dependencies are installed
+
+### Run All Tests
+```bash
+make tests
+```
+You can see a visual report by viewing /htmlcov/index.html
+
 ---
 
 ## Running the Server
@@ -134,80 +153,6 @@ POST /classes/<class_id>/remind
 ### Note on Sandbox Mode
 
 Sandbox mode restricts sending emails to only verified addresses.
-
-
-## Notification Preferences Feature (Feature 7)
-
-This feature allows users to choose how they receive reminders: via email and/or Telegram.
-
-### Email Notifications
-Email notifications use AWS SES. Follow the Email Reminder Feature Setup section above.
-
-### Telegram Notifications
-
-#### Step 1: Create a Telegram Bot
-1. Open Telegram and search for `@BotFather`
-2. Send `/newbot` and follow the instructions
-3. Copy the bot token provided
-
-
-#### Step 2: Link Your Telegram Account (Automatic)
-Your chat_id is captured automatically — no manual lookup needed:
-1. Make sure your account was registered with your phone number
-2. Find your bot on Telegram and send any message
-3. The bot will ask you to share your contact — tap the button
-4. The bot confirms "Account linked successfully"
-5. Your chat_id is now saved automatically
-
-#### Step 3: Configure Environment Variables
-Add to your `.env` file:
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-```
-
-#### Step 4: Register with Notification Preferences
-When registering, optionally include your preferred notification channels:
-```json
-POST /Authentication/register
-{
-  "username": "Ahmed",
-  "email": "ahmed@gmail.com",
-  "password": "Ahmed@123",
-  "phone": "1234567890",
-  "role": "member",
-  "notification_preferences": ["email", "telegram"]
-}
-```
-If `notification_preferences` is not provided, it defaults to `["email"]`.
-
-#### Step 5: Update Preferences After Registration
-```json
-PATCH /Authentication/preferences
-{
-  "notification_preferences": ["email", "telegram"],
-  "telegram_chat_id": "your_chat_id"
-}
-```
-Requires a valid JWT token. Allowed channels: `email`, `telegram`.
-
-#### Step 6: Receive Notifications
-When a trainer sends reminders via `POST /classes/<class_id>/send-reminder`,
-notifications are dispatched to each member based on their saved preferences.
-Members on `["email"]` receive only emails. Members on `["email", "telegram"]`
-receive both. The system records any failed dispatches without
-interrupting other notifications.
-
-#### Note on Telegram Access
-The server must have access to `api.telegram.org` to send Telegram messages.
-If running in a restricted network, configure a proxy before starting the server.
-
-#### Note on Webhook Registration
-The Telegram webhook requires HTTPS. For local testing, use ngrok:
-```bash
-brew install ngrok
-ngrok http 8000
-curl "https://api.telegram.org/bot/setWebhook?url=https:///telegram/webhook"
-```
 
 
 ## Recurring Classes & Per-Occurrence Bookings (Feature 6)
@@ -335,16 +280,79 @@ Auth: Trainer or Admin
 
 ---
 
-## Running Tests
+## Notification Preferences Feature (Feature 7)
 
-### Setup
-Make sure your virtual environment is active and dependencies are installed
+This feature allows users to choose how they receive reminders: via email and/or Telegram.
 
-### Run All Tests
-```bash
-make tests
+### Email Notifications
+Email notifications use AWS SES. Follow the Email Reminder Feature Setup section above.
+
+### Telegram Notifications
+
+#### Step 1: Create a Telegram Bot
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` and follow the instructions
+3. Copy the bot token provided
+
+
+#### Step 2: Link Your Telegram Account (Automatic)
+Your chat_id is captured automatically — no manual lookup needed:
+1. Make sure your account was registered with your phone number
+2. Find your bot on Telegram and send any message
+3. The bot will ask you to share your contact — tap the button
+4. The bot confirms "Account linked successfully"
+5. Your chat_id is now saved automatically
+
+#### Step 3: Configure Environment Variables
+Add to your `.env` file:
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 ```
-You can see a visual report by viewing /htmlcov/index.html
+
+#### Step 4: Register with Notification Preferences
+When registering, optionally include your preferred notification channels:
+```json
+POST /Authentication/register
+{
+  "username": "Ahmed",
+  "email": "ahmed@gmail.com",
+  "password": "Ahmed@123",
+  "phone": "1234567890",
+  "role": "member",
+  "notification_preferences": ["email", "telegram"]
+}
+```
+If `notification_preferences` is not provided, it defaults to `["email"]`.
+
+#### Step 5: Update Preferences After Registration
+```json
+PATCH /Authentication/preferences
+{
+  "notification_preferences": ["email", "telegram"],
+  "telegram_chat_id": "your_chat_id"
+}
+```
+Requires a valid JWT token. Allowed channels: `email`, `telegram`.
+
+#### Step 6: Receive Notifications
+When a trainer sends reminders via `POST /classes/<class_id>/send-reminder`,
+notifications are dispatched to each member based on their saved preferences.
+Members on `["email"]` receive only emails. Members on `["email", "telegram"]`
+receive both. The system records any failed dispatches without
+interrupting other notifications.
+
+#### Note on Telegram Access
+The server must have access to `api.telegram.org` to send Telegram messages.
+If running in a restricted network, configure a proxy before starting the server.
+
+#### Note on Webhook Registration
+The Telegram webhook requires HTTPS. For local testing, use ngrok:
+```bash
+brew install ngrok
+ngrok http 8000
+curl "https://api.telegram.org/bot/setWebhook?url=https:///telegram/webhook"
+```
+--- 
 
 ## Endpoints
 
@@ -415,6 +423,19 @@ You can see a visual report by viewing /htmlcov/index.html
 - Tests use **mocked Telegram API** - no real Telegram messages are sent during testing
 ---
 
+## [BONUS] Frontend Web Application
+
+The project includes a lightweight, responsive vanilla web application located in the `frontend/` directory. It interacts directly with the REST API to provide a user-friendly interface for managing fitness classes.
+
+### Key Features
+- **User Authentication**: Login and registration with role-based UI rendering (Member, Trainer, Admin).
+- **Class Management**: Browse upcoming classes, create new classes, and manage recurrence settings directly from the UI.
+- **Bookings & Members**: Members can book specific class occurrences. Trainers/Admins can view enrolled members per occurrence.
+- **Reminders**: Trainers and Admins can trigger email and Telegram reminders for specific class occurrences or all occurrences.
+- **Preferences**: Users can manage their notification channels (Email/Telegram) seamlessly.
+
+---
+
 # Running with Docker
 
 ## Prerequisites
@@ -428,11 +449,11 @@ You can see a visual report by viewing /htmlcov/index.html
 **2. A `.env` file in the project root should be created with the following variables:**
 
 ```env
-MONGO_URI="mongodb://localhost:27017"
+MONGO_URI="mongodb://mongodb:27017"
 DB_NAME="fitness_db"
 MOCK_DB="false"
 DEBUG="true"
-JWT_SECRET_KEY="your-secret-key"
+JWT_SECRET_KEY=your-secret-key
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 AWS_REGION=eu-north-1        # must match the region where you verified identities
@@ -448,6 +469,8 @@ docker compose up
 
 Open http://localhost:8000 for Swagger UI.
 
+[BONUS] Frontend can be viewed using the link http://localhost:8000/app
+
 ## Stop
 
 ```bash
@@ -457,16 +480,15 @@ docker compose down
 ---
 
 
-
 ## Live Deployment
 
 The application is deployed on a DigitalOcean VM and accessible at:
 
 http://209.38.232.149:8000
 
-The live system is automatically redeployed and .env file is automatically created  whenever code is pushed to main and CI passes.
+The live system is automatically redeployed and .env file is automatically created whenever code is pushed to main and CI passes.
 
-## Frontend Access
+## [BONUS] Frontend Access
 
 Once the backend server is running, the frontend interface can be accessed at:
 
@@ -474,25 +496,10 @@ Once the backend server is running, the frontend interface can be accessed at:
 http://209.38.232.149:8000/app
 ```
 
-## Virtual Environment Management
-
-* Activate: `source .venv/bin/activate`
-* Deactivate: `deactivate`
-
-
-
 ## Contributors 
 
 - Muhammad Shahzaib Hassan
 - Sadaf Habib
 - Muhammad Umair Hafeez
-
-## Additional Documentation
-
-See `/docs/BestPractices.md` for:
-
-* Branch naming conventions
-* Testing guidelines
-* Coding style recommendations
 
 ---
