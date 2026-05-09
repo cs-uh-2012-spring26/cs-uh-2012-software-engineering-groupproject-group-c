@@ -488,13 +488,13 @@ http://209.38.232.149:8000
 
 The live system is automatically redeployed and .env file is automatically created whenever code is pushed to main and CI passes.
 
-## [BONUS] Frontend Access
+### [BONUS] Frontend Access
 
 Once the backend server is running, the frontend interface can be accessed at:
 
-```text
 http://209.38.232.149:8000/app
-```
+
+---
 
 ## Contributors 
 
